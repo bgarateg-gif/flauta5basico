@@ -15,20 +15,25 @@
   .grow { flex:1 1 200px; min-width:0; }
   .full { flex:1 1 100%; }
 
-  button, select { font:inherit; font-size:14px; min-height:36px; padding:4px 10px; background:var(--bg); color:var(--fg);
+  button, select, .file-btn { font:inherit; font-size:14px; min-height:36px; padding:4px 10px; background:var(--bg); color:var(--fg);
     border:2px solid var(--fg); border-radius:6px; cursor:pointer; touch-action:manipulation; font-weight:bold; }
-  button:hover, select:hover { background:#f0f0f0; }
-  button:active { background:#ddd; }
+  button:hover, select:hover, .file-btn:hover { background:#f0f0f0; }
+  button:active, .file-btn:active { background:#ddd; }
   button.on { background:var(--fg); color:var(--bg); }
   button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--fg); outline-offset:1px; }
   select { width:100%; text-overflow:ellipsis; }
+
+  /* Estilos para el botón de cargar archivo */
+  .file-wrapper { display:inline-flex; align-items:center; }
+  .file-wrapper input[type="file"] { display:none; }
+  .file-btn { background:#eee; }
 
   .lbl { font-style:italic; white-space:nowrap; font-size:14px; margin-right:4px; }
   input[type=range] { flex:1; min-width:0; height:28px; accent-color:#000; cursor:pointer; margin:0; }
   #speedv { min-width:4ch; text-align:right; font-variant-numeric:tabular-nums; font-weight:bold; font-size:14px; }
   #time { font-size:14px; font-variant-numeric:tabular-nums; white-space:nowrap; min-width:8.5ch; font-weight:bold; }
 
-  #status { padding:6px 12px; font-size:14px; border-bottom:1px solid var(--fg); min-height:30px; font-weight:bold; background:#fafafa; }
+  #status { padding:6px 12px; font-size:14px; border-bottom:1px solid var(--fg); min-height:30px; font-weight:bold; background:#fafafa; color: #333; }
   main { flex:1; display:flex; align-items:center; justify-content:center; padding:10px; position:relative; width:100%; background:#eaeaea; }
   canvas { width:min(100%, calc((100vh - 160px) * 16 / 9)); max-width:1280px; aspect-ratio:16/9; height:auto; background:var(--bg); border:2px solid var(--fg); border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
@@ -46,6 +51,11 @@
     <select id="song" aria-label="Elegir canción">
       <option value="" disabled selected>Selecciona una melodía...</option>
     </select>
+    
+    <label class="file-wrapper" title="Abrir un archivo MIDI desde tu computadora">
+      <span class="file-btn">📁 Abrir MIDI manual</span>
+      <input type="file" id="local-file" accept=".mid,.midi">
+    </label>
   </div>
 
   <div class="group">
@@ -71,7 +81,7 @@
   </div>
 </div>
 
-<div id="status">Esperando selección de canción...</div>
+<div id="status">Selecciona una canción para empezar...</div>
 <main><canvas id="cv" width="1280" height="720"></canvas></main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -80,16 +90,15 @@
 window.addEventListener("load", () => {
   const el = id => document.getElementById(id);
 
-  /* ============ 1. Repertorio ============ */
+  /* ============ 1. Repertorio (Apuntando a la carpeta "midis") ============ */
   const REPERTORIO = [
-    { nombre: "Viva el Carnaval", url: "./viva el carnaval.mid" },
-    { nombre: "Tinom-Tanom 1", url: "./Tinom-Tanom 1.mid" },
-    { nombre: "Tinom-Tanom 2", url: "./Tinom-Tanom 2.mid" },
-    { nombre: "Oh quédate con nosotros - BWV 253", url: "./BWV253.mid" }
+    { nombre: "Viva el Carnaval", url: "./midis/viva el carnaval.mid" },
+    { nombre: "Tinom-Tanom 1", url: "./midis/Tinom-Tanom 1.mid" },
+    { nombre: "Tinom-Tanom 2", url: "./midis/Tinom-Tanom 2.mid" },
+    { nombre: "Oh quédate con nosotros - BWV 253", url: "./midis/BWV253.mid" }
   ];
 
-  /* ============ 2. Digitaciones (flauta dulce soprano) ============
-     holes = [pulgar(trasero), 1,2,3,4,5,6,7]  ->  1 = tapado, 0 = destapado */
+  /* ============ 2. Digitaciones ============ */
   const LABELS = { "C5":"Do", "D5":"Re", "E5":"Mi", "F5":"Fa", "F#5":"Fa#", "G5":"Sol", "A5":"La", "B5":"Si", "C6":"Do’", "D6":"Re’" };
   const COMMON = {
     "C5":  [1,1,1,1,1,1,1,1], "D5":  [1,1,1,1,1,1,1,0], "E5":  [1,1,1,1,1,1,0,0],
@@ -98,15 +107,8 @@ window.addEventListener("load", () => {
   };
   
   const SYSTEMS = {
-    barroca: Object.assign({}, COMMON, { 
-      "F5": [1,1,1,1,1,0,1,1], 
-      "F#5": [1,1,1,1,0,1,1,0] 
-    }),
-    alemana: Object.assign({}, COMMON, { 
-      "F5": [1,1,1,1,1,0,0,0], 
-      /* CORRECCIÓN FA# ALEMANA BASADA EN IMAGEN: Pulgar, 1, 2 y 3 tapados, 4 destapado, 5, 6 y 7 tapados */
-      "F#5": [1,1,1,1,0,1,1,1] 
-    })
+    barroca: Object.assign({}, COMMON, { "F5": [1,1,1,1,1,0,1,1], "F#5": [1,1,1,1,0,1,1,0] }),
+    alemana: Object.assign({}, COMMON, { "F5": [1,1,1,1,1,0,0,0], "F#5": [1,1,1,1,0,1,1,1] })
   };
   
   let system = "barroca";
@@ -168,7 +170,6 @@ window.addEventListener("load", () => {
       }, n.ticks + "i");
     });
     
-    // Metrónomo siempre activo
     T.scheduleRepeat(time => {
       const b = Math.round(T.getTicksAtTime(time) / ppq);
       click.triggerAttackRelease(b % num === 0 ? "C3" : "G2", "32n", time);
@@ -181,33 +182,51 @@ window.addEventListener("load", () => {
       (skipped ? ` (${skipped} fuera del rango, omitidas)` : "");
   }
 
+  // Carga desde GitHub / Servidor
   async function loadMidi(index) {
     const item = REPERTORIO[index], token = ++loadToken;
     resetPlayback();
     el("status").textContent = "Cargando «" + item.nombre + "»…";
     try {
       const r = await fetch(item.url);
-      if (!r.ok) throw new Error("No se encontró el archivo MIDI en la misma carpeta.");
+      if (!r.ok) throw new Error(`No se encontró el archivo en la ruta: ${item.url}`);
       const buf = await r.arrayBuffer();
       if (token !== loadToken) return;
 
-      const MidiClass = (window.Midi && window.Midi.Midi) || window.Midi;
-      const midi = new MidiClass(buf);
-      const raw = [];
-      midi.tracks.forEach(tr => {
-        if (tr.instrument && tr.instrument.percussion) return;
-        tr.notes.forEach(n => raw.push({ midi: n.midi, ticks: n.ticks, durationTicks: n.durationTicks, velocity: n.velocity }));
-      });
-      
-      if (!raw.length) throw new Error("El archivo no contiene notas.");
-      const bpm = midi.header.tempos.length ? midi.header.tempos[0].bpm : 120;
-      const ts = midi.header.timeSignatures.length ? midi.header.timeSignatures[0].timeSignature[0] : 4;
-      buildSong(raw, bpm, midi.header.ppq, ts, item.nombre);
+      parseMidiBuffer(buf, item.nombre);
     } catch (err) {
       if (token !== loadToken) return;
       el("status").textContent = "❌ Error: " + err.message;
       console.error(err);
     }
+  }
+
+  // Carga Manual
+  el("local-file").addEventListener("change", async e => {
+    const file = e.target.files[0]; if (!file) return;
+    el("song").selectedIndex = 0;
+    try {
+      const buf = await file.arrayBuffer();
+      parseMidiBuffer(buf, file.name);
+    } catch (err) {
+      el("status").textContent = "❌ No se pudo leer el archivo MIDI seleccionado.";
+      console.error(err);
+    }
+  });
+
+  function parseMidiBuffer(buf, name) {
+    const MidiClass = (window.Midi && window.Midi.Midi) || window.Midi;
+    const midi = new MidiClass(buf);
+    const raw = [];
+    midi.tracks.forEach(tr => {
+      if (tr.instrument && tr.instrument.percussion) return;
+      tr.notes.forEach(n => raw.push({ midi: n.midi, ticks: n.ticks, durationTicks: n.durationTicks, velocity: n.velocity }));
+    });
+    
+    if (!raw.length) { el("status").textContent = "El archivo no contiene notas."; return; }
+    const bpm = midi.header.tempos.length ? midi.header.tempos[0].bpm : 120;
+    const ts = midi.header.timeSignatures.length ? midi.header.timeSignatures[0].timeSignature[0] : 4;
+    buildSong(raw, bpm, midi.header.ppq, ts, name);
   }
 
   const songSel = el("song");
@@ -245,7 +264,6 @@ window.addEventListener("load", () => {
     [...el("systems").querySelectorAll("button")].forEach(x => x.classList.toggle("on", x === b));
   });
 
-  /* Control deslizante de la música */
   const seek = el("seek");
   let dragging = false, wasPlaying = false, lastSeek = 0;
   
@@ -292,7 +310,6 @@ window.addEventListener("load", () => {
     const w = widthOf(h), y = v => topY + v * h;
     ctx.lineJoin = "round"; ctx.strokeStyle = "#000"; ctx.lineWidth = lit ? 5 : 2.5;
     
-    // Cuerpo de flauta
     ctx.beginPath();
     ctx.moveTo(cx - 0.35 * w, y(0));  ctx.lineTo(cx + 0.35 * w, y(0));
     ctx.lineTo(cx + 0.35 * w, y(0.10)); ctx.lineTo(cx + 0.5 * w, y(0.14));
@@ -304,17 +321,14 @@ window.addEventListener("load", () => {
     if (lit) { ctx.fillStyle = hatch; ctx.fill(); }
     ctx.stroke();
     
-    // Bisel
     ctx.lineWidth = 2; ctx.fillStyle = "#fff";
     ctx.fillRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
     ctx.strokeRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
     
-    // Orificios
     holes.forEach((covered, i) => {
       const r = 0.031 * h, hy = y(HOLE_Y[i]);
       const hx = i === 0 ? cx - 0.5 * w - r - 8 : cx; 
       
-      // Animación de iluminación en orificios
       if (lit && covered) {
         ctx.shadowColor = color;
         ctx.shadowBlur = 20;
@@ -326,7 +340,7 @@ window.addEventListener("load", () => {
       ctx.fillStyle = covered ? color : "#fff"; 
       ctx.fill();
       
-      ctx.shadowBlur = 0; // Reset sombra para el borde
+      ctx.shadowBlur = 0; 
       ctx.lineWidth = 2; ctx.strokeStyle = "#000"; ctx.stroke();
       
       if (lit && covered) { 
@@ -335,7 +349,6 @@ window.addEventListener("load", () => {
     });
   }
 
-  /* ============ Pentagrama ============ */
   const STAFF_TOP = 585, SP = 16;
   const STEP = { "C5":-2, "D5":-1, "E5":0, "F5":1, "F#5":1, "G5":2, "A5":3, "B5":4, "C6":5, "D6":6 }; 
   const stepY = st => STAFF_TOP + 4 * SP - st * SP / 2;
@@ -414,9 +427,7 @@ window.addEventListener("load", () => {
     ctx.restore();
   }
 
-  function getBeat() {
-    return Tone.Transport.ticks / Tone.Transport.PPQ;
-  }
+  function getBeat() { return Tone.Transport.ticks / Tone.Transport.PPQ; }
   const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 
   function frame() {
@@ -443,11 +454,9 @@ window.addEventListener("load", () => {
     const recvTop = CY - RECV_H / 2;
     if (active) ctx.fillText(active.label, RECV_X, recvTop - 22);
     
-    // Dibuja la flauta principal receptora
     drawFlute(RECV_X, recvTop, RECV_H, active ? holesOf(active.key) : [0,0,0,0,0,0,0,0], !!active, active ? colorOf(active.key) : "#000");
     drawStaff(beat, active);
 
-    // Actualizar controles de tiempo
     if (song.notes.length > 0) {
       const spb = 60 / (song.bpm * speed), cur = Math.min(beat, song.endBeat);
       el("time").textContent = fmt(cur * spb) + " / " + fmt(song.endBeat * spb);
