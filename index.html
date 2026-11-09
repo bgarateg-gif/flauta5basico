@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flauta Dulce – Repertorio Estudiantes</title>
+<style>
+  :root { --fg:#000; --bg:#fff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:Georgia,"Times New Roman",serif; }
+  body { display:flex; flex-direction:column; height:100vh; height:100dvh; min-height:100%; overflow-x:hidden; }
+
+  .controls { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:8px 12px; border-bottom:3px solid var(--fg); background:var(--bg); }
+  .group { display:flex; gap:6px; align-items:center; }
+  .grow { flex:1 1 200px; min-width:0; }
+  .full { flex:1 1 100%; }
+
+  button, select { font:inherit; font-size:14px; min-height:36px; padding:4px 10px; background:var(--bg); color:var(--fg);
+    border:2px solid var(--fg); border-radius:6px; cursor:pointer; touch-action:manipulation; font-weight:bold; }
+  button:hover, select:hover { background:#f0f0f0; }
+  button:active { background:#ddd; }
+  button.on { background:var(--fg); color:var(--bg); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--fg); outline-offset:1px; }
+  select { width:100%; text-overflow:ellipsis; }
+
+  .lbl { font-style:italic; white-space:nowrap; font-size:14px; margin-right:4px; }
+  input[type=range] { flex:1; min-width:0; height:28px; accent-color:#000; cursor:pointer; margin:0; }
+  #speedv { min-width:4ch; text-align:right; font-variant-numeric:tabular-nums; font-weight:bold; font-size:14px; }
+  #time { font-size:14px; font-variant-numeric:tabular-nums; white-space:nowrap; min-width:8.5ch; font-weight:bold; }
+
+  #status { padding:6px 12px; font-size:14px; border-bottom:1px solid var(--fg); min-height:30px; font-weight:bold; background:#fafafa; }
+  main { flex:1; display:flex; align-items:center; justify-content:center; padding:10px; position:relative; width:100%; background:#eaeaea; }
+  canvas { width:min(100%, calc((100vh - 160px) * 16 / 9)); max-width:1280px; aspect-ratio:16/9; height:auto; background:var(--bg); border:2px solid var(--fg); border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+  @media (max-width:700px) {
+    .controls { gap:6px; padding:6px; }
+    #play, #stop { flex:1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <div class="group grow" style="flex-basis:100%">
+    <label class="lbl" for="song">Canción:</label>
+    <select id="song" aria-label="Elegir canción">
+      <option value="" disabled selected>Selecciona una melodía...</option>
+    </select>
+  </div>
+
+  <div class="group">
+    <button id="play">Iniciar</button>
+    <button id="stop">Reiniciar</button>
+  </div>
+
+  <div class="group grow">
+    <label class="lbl" for="speed">Velocidad:</label>
+    <input type="range" id="speed" min="50" max="150" step="5" value="100" aria-label="Velocidad">
+    <output id="speedv" for="speed">100%</output>
+  </div>
+
+  <div class="group" id="systems">
+    <span class="lbl">Digitación:</span>
+    <button data-sys="alemana">Alemana</button>
+    <button data-sys="barroca" class="on">Barroca</button>
+  </div>
+
+  <div class="group full">
+    <span id="time">0:00 / 0:00</span>
+    <input type="range" id="seek" min="0" max="1" step="any" value="0" aria-label="Posición en la canción">
+  </div>
+</div>
+
+<div id="status">Esperando selección de canción...</div>
+<main><canvas id="cv" width="1280" height="720"></canvas></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
+<script>
+window.addEventListener("load", () => {
+  const el = id => document.getElementById(id);
+
+  /* ============ 1. Repertorio ============ */
+  const REPERTORIO = [
+    { nombre: "Viva el Carnaval", url: "./viva el carnaval.mid" },
+    { nombre: "Tinom-Tanom 1", url: "./Tinom-Tanom 1.mid" },
+    { nombre: "Tinom-Tanom 2", url: "./Tinom-Tanom 2.mid" },
+    { nombre: "Oh quédate con nosotros - BWV 253", url: "./BWV253.mid" }
+  ];
+
+  /* ============ 2. Digitaciones (flauta dulce soprano) ============
+     holes = [pulgar(trasero), 1,2,3,4,5,6,7]  ->  1 = tapado, 0 = destapado */
+  const LABELS = { "C5":"Do", "D5":"Re", "E5":"Mi", "F5":"Fa", "F#5":"Fa#", "G5":"Sol", "A5":"La", "B5":"Si", "C6":"Do’", "D6":"Re’" };
+  const COMMON = {
+    "C5":  [1,1,1,1,1,1,1,1], "D5":  [1,1,1,1,1,1,1,0], "E5":  [1,1,1,1,1,1,0,0],
+    "G5":  [1,1,1,1,0,0,0,0], "A5":  [1,1,1,0,0,0,0,0], "B5":  [1,1,0,0,0,0,0,0],
+    "C6":  [1,0,1,0,0,0,0,0], "D6":  [0,0,1,0,0,0,0,0]
+  };
+  
+  const SYSTEMS = {
+    barroca: Object.assign({}, COMMON, { 
+      "F5": [1,1,1,1,1,0,1,1], 
+      "F#5": [1,1,1,1,0,1,1,0] 
+    }),
+    alemana: Object.assign({}, COMMON, { 
+      "F5": [1,1,1,1,1,0,0,0], 
+      /* CORRECCIÓN FA# ALEMANA BASADA EN IMAGEN: Pulgar, 1, 2 y 3 tapados, 4 destapado, 5, 6 y 7 tapados */
+      "F#5": [1,1,1,1,0,1,1,1] 
+    })
+  };
+  
+  let system = "barroca";
+  const holesOf = key => SYSTEMS[system][key];
+  const BY_MIDI = {};
+  Object.keys(LABELS).forEach(n => { BY_MIDI[Math.round(Tone.Frequency(n).toMidi())] = n; });
+
+  const PC_COLORS = ["#EB2427","#EF4D27","#F6851F","#FFC000","#FBED1B","#6BBE46","#30B24F","#0C9648","#1500FF","#80539F","#C800FF","#E14197"];
+  const colorOf = key => PC_COLORS[Math.round(Tone.Frequency(key).toMidi()) % 12];
+
+  function lookup(midi) {
+    for (const k of [0, 1, -1, 2, -2, 3, -3]) { const f = BY_MIDI[midi + 12 * k]; if (f) return f; }
+    return null;
+  }
+
+  /* ============ 3. Audio ============ */
+  const vibrato = new Tone.Vibrato(5, 0.08).toDestination();
+  const synth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: "custom", partials: [1, 0.22, 0.06] },
+    envelope: { attack: 0.05, decay: 0.1, sustain: 0.85, release: 0.15 }
+  }).connect(vibrato);
+  synth.volume.value = -6;
+  
+  const click = new Tone.MembraneSynth({
+    pitchDecay: 0.008, octaves: 2,
+    envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.01 }
+  }).toDestination();
+  click.volume.value = -8;
+
+  /* ============ 4. Estado y Carga ============ */
+  let song = { notes: [], bpm: 100, ppq: 480, num: 4, lead: 4, endBeat: 0 };
+  let speed = 1, loadToken = 0;
+
+  function buildSong(raw, bpm, ppq, num, name) {
+    resetPlayback();
+    const T = Tone.Transport;
+    T.cancel();
+    T.PPQ = ppq;
+    num = Math.min(Math.max(num || 4, 2), 6);
+    
+    const notes = []; let skipped = 0;
+    raw.sort((a, b) => a.ticks - b.ticks).forEach(n => {
+      const key = lookup(n.midi);
+      if (!key) { skipped++; return; }
+      notes.push({
+        midi: n.midi, key: key, label: LABELS[key],
+        startBeat: n.ticks / ppq + num, durBeats: n.durationTicks / ppq,
+        vel: n.velocity || 0.8, ticks: n.ticks + num * ppq, dur: n.durationTicks
+      });
+    });
+    
+    song = { notes, bpm, ppq, num, lead: num,
+      endBeat: notes.reduce((m, n) => Math.max(m, n.startBeat + n.durBeats), 0) + 1.5 };
+      
+    notes.forEach(n => {
+      T.schedule(time => {
+        const d = new Tone.Ticks(n.dur).toSeconds() * 0.95;
+        synth.triggerAttackRelease(Tone.Frequency(n.midi, "midi").toFrequency(), d, time, n.vel);
+      }, n.ticks + "i");
+    });
+    
+    // Metrónomo siempre activo
+    T.scheduleRepeat(time => {
+      const b = Math.round(T.getTicksAtTime(time) / ppq);
+      click.triggerAttackRelease(b % num === 0 ? "C3" : "G2", "32n", time);
+    }, "4n");
+    
+    T.bpm.value = bpm * speed;
+    el("seek").max = song.endBeat; 
+    el("seek").value = 0;
+    el("status").textContent = `🎵 ${name} — ${Math.round(bpm)} BPM — ${notes.length} notas` + 
+      (skipped ? ` (${skipped} fuera del rango, omitidas)` : "");
+  }
+
+  async function loadMidi(index) {
+    const item = REPERTORIO[index], token = ++loadToken;
+    resetPlayback();
+    el("status").textContent = "Cargando «" + item.nombre + "»…";
+    try {
+      const r = await fetch(item.url);
+      if (!r.ok) throw new Error("No se encontró el archivo MIDI en la misma carpeta.");
+      const buf = await r.arrayBuffer();
+      if (token !== loadToken) return;
+
+      const MidiClass = (window.Midi && window.Midi.Midi) || window.Midi;
+      const midi = new MidiClass(buf);
+      const raw = [];
+      midi.tracks.forEach(tr => {
+        if (tr.instrument && tr.instrument.percussion) return;
+        tr.notes.forEach(n => raw.push({ midi: n.midi, ticks: n.ticks, durationTicks: n.durationTicks, velocity: n.velocity }));
+      });
+      
+      if (!raw.length) throw new Error("El archivo no contiene notas.");
+      const bpm = midi.header.tempos.length ? midi.header.tempos[0].bpm : 120;
+      const ts = midi.header.timeSignatures.length ? midi.header.timeSignatures[0].timeSignature[0] : 4;
+      buildSong(raw, bpm, midi.header.ppq, ts, item.nombre);
+    } catch (err) {
+      if (token !== loadToken) return;
+      el("status").textContent = "❌ Error: " + err.message;
+      console.error(err);
+    }
+  }
+
+  const songSel = el("song");
+  REPERTORIO.forEach((s, i) => { const o = document.createElement("option"); o.value = i; o.textContent = s.nombre; songSel.append(o); });
+  songSel.addEventListener("change", () => loadMidi(parseInt(songSel.value, 10)));
+
+  /* ============ 5. Controles ============ */
+  function resetPlayback() {
+    Tone.Transport.stop();
+    synth.releaseAll();
+    el("play").textContent = "Iniciar";
+    Tone.Transport.ticks = 0;
+    el("seek").value = 0;
+  }
+  
+  el("play").addEventListener("click", async () => {
+    await Tone.start();
+    const T = Tone.Transport;
+    if (T.state === "started") { T.pause(); synth.releaseAll(); el("play").textContent = "Iniciar"; }
+    else { T.start(); el("play").textContent = "Pausa"; }
+  });
+  
+  el("stop").addEventListener("click", resetPlayback);
+  
+  el("speed").addEventListener("input", e => {
+    const v = parseInt(e.target.value, 10);
+    speed = v / 100;
+    el("speedv").textContent = v + "%";
+    Tone.Transport.bpm.value = song.bpm * speed;
+  });
+
+  el("systems").addEventListener("click", e => {
+    const b = e.target.closest("button[data-sys]"); if (!b) return;
+    system = b.dataset.sys;
+    [...el("systems").querySelectorAll("button")].forEach(x => x.classList.toggle("on", x === b));
+  });
+
+  /* Control deslizante de la música */
+  const seek = el("seek");
+  let dragging = false, wasPlaying = false, lastSeek = 0;
+  
+  seek.addEventListener("pointerdown", () => {
+    dragging = true;
+    wasPlaying = Tone.Transport.state === "started";
+    if (wasPlaying) { Tone.Transport.pause(); synth.releaseAll(); }
+  });
+  
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    if (wasPlaying) { Tone.Transport.start(); wasPlaying = false; }
+  }
+  
+  ["pointerup", "pointercancel", "change"].forEach(ev => seek.addEventListener(ev, endDrag));
+  
+  seek.addEventListener("input", () => {
+    lastSeek = performance.now();
+    const posTicks = Math.round(parseFloat(seek.value) * Tone.Transport.PPQ);
+    Tone.Transport.ticks = posTicks;
+    if (!dragging && Tone.Transport.state === "started") synth.releaseAll();
+  });
+
+  /* ============ 6. Dibujo ============ */
+  const cv = el("cv"), ctx = cv.getContext("2d");
+  const W = 1280, H = 720, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
+
+  const RECV_X = 170, RECV_H = 360, MOVE_H = 240, CY = 300, PX_BEAT = 240;
+  const widthOf = h => 0.16 * h;
+  const CONTACT_X = RECV_X + widthOf(RECV_H) / 2 + widthOf(MOVE_H) / 2 + 0.062 * MOVE_H + 8;
+  const HOLE_Y = [0.21, 0.31, 0.39, 0.47, 0.60, 0.68, 0.76, 0.84];
+
+  const hatch = (() => {
+    const c = document.createElement("canvas"); c.width = c.height = 8;
+    const g = c.getContext("2d"); g.strokeStyle = "#000"; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
+    return ctx.createPattern(c, "repeat");
+  })();
+
+  function drawFlute(cx, topY, h, holes, lit, color) {
+    color = color || "#000";
+    const w = widthOf(h), y = v => topY + v * h;
+    ctx.lineJoin = "round"; ctx.strokeStyle = "#000"; ctx.lineWidth = lit ? 5 : 2.5;
+    
+    // Cuerpo de flauta
+    ctx.beginPath();
+    ctx.moveTo(cx - 0.35 * w, y(0));  ctx.lineTo(cx + 0.35 * w, y(0));
+    ctx.lineTo(cx + 0.35 * w, y(0.10)); ctx.lineTo(cx + 0.5 * w, y(0.14));
+    ctx.lineTo(cx + 0.5 * w, y(0.90)); ctx.lineTo(cx + 0.72 * w, y(1));
+    ctx.lineTo(cx - 0.72 * w, y(1));  ctx.lineTo(cx - 0.5 * w, y(0.90));
+    ctx.lineTo(cx - 0.5 * w, y(0.14)); ctx.lineTo(cx - 0.35 * w, y(0.10));
+    ctx.closePath();
+    ctx.fillStyle = "#fff"; ctx.fill();
+    if (lit) { ctx.fillStyle = hatch; ctx.fill(); }
+    ctx.stroke();
+    
+    // Bisel
+    ctx.lineWidth = 2; ctx.fillStyle = "#fff";
+    ctx.fillRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
+    ctx.strokeRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
+    
+    // Orificios
+    holes.forEach((covered, i) => {
+      const r = 0.031 * h, hy = y(HOLE_Y[i]);
+      const hx = i === 0 ? cx - 0.5 * w - r - 8 : cx; 
+      
+      // Animación de iluminación en orificios
+      if (lit && covered) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, 7);
+      ctx.fillStyle = covered ? color : "#fff"; 
+      ctx.fill();
+      
+      ctx.shadowBlur = 0; // Reset sombra para el borde
+      ctx.lineWidth = 2; ctx.strokeStyle = "#000"; ctx.stroke();
+      
+      if (lit && covered) { 
+        ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hx, hy, r + 5, 0, 7); ctx.stroke(); 
+      }
+    });
+  }
+
+  /* ============ Pentagrama ============ */
+  const STAFF_TOP = 585, SP = 16;
+  const STEP = { "C5":-2, "D5":-1, "E5":0, "F5":1, "F#5":1, "G5":2, "A5":3, "B5":4, "C6":5, "D6":6 }; 
+  const stepY = st => STAFF_TOP + 4 * SP - st * SP / 2;
+
+  function drawClef(cx) {
+    const X = u => cx + u * SP, Y = u => STAFF_TOP + u * SP;
+    ctx.save(); ctx.strokeStyle = "#000"; ctx.fillStyle = "#000"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(X(-0.6), Y(4.7));
+    ctx.bezierCurveTo(X(-0.5), Y(5.5), X(0.55), Y(5.5), X(0.55), Y(4.5));
+    ctx.lineTo(X(0.2), Y(-0.4));
+    ctx.bezierCurveTo(X(0.2), Y(-1.6), X(1.2), Y(-1.6), X(1.0), Y(-0.4));
+    ctx.bezierCurveTo(X(0.9), Y(0.8), X(-1.0), Y(1.8), X(-1.0), Y(3.0));
+    ctx.bezierCurveTo(X(-1.1), Y(4.4), X(1.2), Y(4.4), X(1.2), Y(3.0));
+    ctx.bezierCurveTo(X(1.2), Y(1.8), X(-0.6), Y(1.9), X(-0.6), Y(3.0));
+    ctx.bezierCurveTo(X(-0.6), Y(3.7), X(0.3), Y(3.8), X(0.4), Y(3.1));
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(X(-0.6), Y(4.7), 3, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStaff(beat, active) {
+    const bottom = STAFF_TOP + 4 * SP;
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.lineCap = "butt";
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(20, STAFF_TOP + i * SP); ctx.lineTo(W - 20, STAFF_TOP + i * SP); ctx.stroke(); }
+    drawClef(80);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(RECV_X, 0, W - RECV_X, H); ctx.clip();
+    const m = song.num;
+    let b = Math.max(m, Math.ceil((beat - (CONTACT_X - RECV_X) / PX_BEAT) / m) * m);
+    for (; ; b += m) {
+      const x = CONTACT_X + (b - 0.125 - beat) * PX_BEAT;
+      if (x > W - 20) break;
+      ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, STAFF_TOP); ctx.lineTo(x, bottom); ctx.stroke();
+    }
+    
+    for (const n of song.notes) {
+      const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
+      if (x > W + 40) break;
+      if (x < RECV_X - 30) continue;
+      const st = STEP[n.key], y = stepY(st);
+      ctx.strokeStyle = "#000"; ctx.fillStyle = "#000"; ctx.lineWidth = 1.5;
+      for (let l = -2; l >= st; l -= 2) { ctx.beginPath(); ctx.moveTo(x - 15, stepY(l)); ctx.lineTo(x + 15, stepY(l)); ctx.stroke(); }
+      if (n.key.indexOf("#") > -1) {                                   
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(x - 27, y - 9); ctx.lineTo(x - 27, y + 9);
+        ctx.moveTo(x - 21, y - 10); ctx.lineTo(x - 21, y + 8);
+        ctx.lineWidth = 3.2;
+        ctx.moveTo(x - 31, y - 2); ctx.lineTo(x - 17, y - 5);
+        ctx.moveTo(x - 31, y + 5); ctx.lineTo(x - 17, y + 2);
+        ctx.stroke();
+      }
+      ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);             
+      ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, 7);
+      ctx.fillStyle = colorOf(n.key); ctx.fill();
+      ctx.lineWidth = 2.5; ctx.stroke();
+      if (n.durBeats >= 2) {                                           
+        ctx.beginPath(); ctx.ellipse(0, 0, 6, 2.8, -0.5, 0, 7); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      ctx.restore();
+      ctx.lineWidth = 2; ctx.fillStyle = "#000";
+      if (n.durBeats < 4) {                                            
+        const down = st >= 4, sx = down ? x - 9 : x + 9, ey = down ? y + 3.5 * SP : y - 3.5 * SP;
+        ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, ey);
+        if (n.durBeats < 1) { ctx.moveTo(sx, ey); ctx.quadraticCurveTo(sx + 2, ey + (down ? -12 : 12), sx + 13, ey + (down ? -16 : 16)); }
+        ctx.stroke();
+      }
+      if (n === active) { ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 20, 0, 7); ctx.stroke(); }
+    }
+    
+    ctx.setLineDash([4, 5]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(CONTACT_X, STAFF_TOP - 45); ctx.lineTo(CONTACT_X, bottom + 45); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function getBeat() {
+    return Tone.Transport.ticks / Tone.Transport.PPQ;
+  }
+  const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
+  function frame() {
+    const beat = getBeat() || 0;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#000"; ctx.textAlign = "center";
+
+    let active = null;
+    const topMove = CY - MOVE_H / 2;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(RECV_X, 0, W - RECV_X, H); ctx.clip();   
+    for (const n of song.notes) {
+      const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
+      if (beat >= n.startBeat && beat < n.startBeat + n.durBeats) active = n;
+      if (x > W + 40) break;
+      if (x < RECV_X - 30) continue;
+      ctx.fillStyle = "#000"; ctx.font = "bold 22px Georgia, serif";
+      ctx.fillText(n.label, x, topMove - 14);
+      drawFlute(x, topMove, MOVE_H, holesOf(n.key), false, colorOf(n.key));
+    }
+    ctx.restore();
+
+    ctx.fillStyle = "#000"; ctx.font = "bold 44px Georgia, serif"; ctx.textAlign = "center";
+    const recvTop = CY - RECV_H / 2;
+    if (active) ctx.fillText(active.label, RECV_X, recvTop - 22);
+    
+    // Dibuja la flauta principal receptora
+    drawFlute(RECV_X, recvTop, RECV_H, active ? holesOf(active.key) : [0,0,0,0,0,0,0,0], !!active, active ? colorOf(active.key) : "#000");
+    drawStaff(beat, active);
+
+    // Actualizar controles de tiempo
+    if (song.notes.length > 0) {
+      const spb = 60 / (song.bpm * speed), cur = Math.min(beat, song.endBeat);
+      el("time").textContent = fmt(cur * spb) + " / " + fmt(song.endBeat * spb);
+      if (!dragging && performance.now() - lastSeek > 300) el("seek").value = Math.min(beat, song.endBeat) / song.endBeat || 0; 
+    }
+
+    if (Tone.Transport.state === "started" && beat > song.endBeat) resetPlayback();
+    requestAnimationFrame(frame);
+  }
+  
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
