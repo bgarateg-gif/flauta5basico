@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
 <style>
   :root {
     --fg: #1E293B;
@@ -549,6 +550,7 @@
 <script>
 window.addEventListener("load", () => {
   const el = id => document.getElementById(id);
+  const VF = window.Vex && window.Vex.Flow;
 
   /* ============ 1. Repertorio (carpeta "midis") ============ */
   const REPERTORIO = [
@@ -558,8 +560,21 @@ window.addEventListener("load", () => {
     { nombre: "Oh quédate con nosotros - BWV 253", url: "./midis/BWV253.mid" }
   ];
 
-  /* ============ 2. Digitaciones (flauta dulce soprano) ============ */
+  /* ============ 2. Digitaciones y Mapeo VexFlow (flauta dulce soprano) ============ */
   const LABELS = { "C5":"Do", "D5":"Re", "E5":"Mi", "F5":"Fa", "F#5":"Fa#", "G5":"Sol", "A5":"La", "B5":"Si", "C6":"Do’", "D6":"Re’" };
+  const VEX_KEYS = {
+    "C5":  { key: "c/4",  acc: null },
+    "D5":  { key: "d/4",  acc: null },
+    "E5":  { key: "e/4",  acc: null },
+    "F5":  { key: "f/4",  acc: null },
+    "F#5": { key: "f#/4", acc: "#"  },
+    "G5":  { key: "g/4",  acc: null },
+    "A5":  { key: "a/4",  acc: null },
+    "B5":  { key: "b/4",  acc: null },
+    "C6":  { key: "c/5",  acc: null },
+    "D6":  { key: "d/5",  acc: null }
+  };
+
   const COMMON = {
     "C5":  [1,1,1,1,1,1,1,1], "D5":  [1,1,1,1,1,1,1,0], "E5":  [1,1,1,1,1,1,0,0],
     "G5":  [1,1,1,1,0,0,0,0], "A5":  [1,1,1,0,0,0,0,0], "B5":  [1,1,0,0,0,0,0,0],
@@ -593,6 +608,31 @@ window.addEventListener("load", () => {
     return null;
   }
 
+  /* Tabla de duraciones en pulsos -> códigos VexFlow */
+  const DUR_TABLE = [
+    { beats: 4,    code: "w",  dotted: false },
+    { beats: 3,    code: "hd", dotted: true  },
+    { beats: 2,    code: "h",  dotted: false },
+    { beats: 1.5,  code: "qd", dotted: true  },
+    { beats: 1,    code: "q",  dotted: false },
+    { beats: 0.75, code: "8d", dotted: true  },
+    { beats: 0.5,  code: "8",  dotted: false },
+    { beats: 0.25, code: "16", dotted: false }
+  ];
+
+  function matchVexDuration(beats) {
+    let best = DUR_TABLE[4]; // "q" por defecto
+    let minDiff = Infinity;
+    for (const item of DUR_TABLE) {
+      const diff = Math.abs(beats - item.beats);
+      if (diff < minDiff) {
+        minDiff = diff;
+        best = item;
+      }
+    }
+    return best;
+  }
+
   /* ============ 3. Audio ============ */
   const vibrato = new Tone.Vibrato(5, 0.08).toDestination();
   const synth = new Tone.PolySynth(Tone.Synth, {
@@ -608,7 +648,7 @@ window.addEventListener("load", () => {
   click.volume.value = -8;
 
   /* ============ 4. Estado y Carga ============ */
-  let song = { notes: [], bpm: 100, ppq: 480, num: 4, lead: 4, endBeat: 1 };
+  let song = { notes: [], rests: [], bpm: 100, ppq: 480, num: 4, lead: 4, endBeat: 1 };
   let speed = 1, posTicks = 0, loadToken = 0;
 
   function buildSong(raw, bpm, ppq, num, name) {
@@ -618,19 +658,80 @@ window.addEventListener("load", () => {
     T.PPQ = ppq;
     num = Math.min(Math.max(num || 4, 2), 6);
 
+    const secPerBeat = 60 / bpm;
     const notes = [];
     raw.sort((a, b) => a.ticks - b.ticks).forEach(n => {
       const key = lookup(n.midi);
       if (!key) return;
+      const durSec = (n.durationTicks / ppq) * secPerBeat;
+      const durBeats = durSec / secPerBeat;
+      const vexInfo = VEX_KEYS[key];
       notes.push({
-        midi: n.midi, key: key, label: LABELS[key],
-        startBeat: n.ticks / ppq + num, durBeats: n.durationTicks / ppq,
-        vel: n.velocity || 0.8, ticks: n.ticks + num * ppq, dur: n.durationTicks
+        midi: n.midi,
+        key: key,
+        label: LABELS[key],
+        vexKey: vexInfo.key,
+        vexAcc: vexInfo.acc,
+        color: colorOf(key),
+        startBeat: n.ticks / ppq + num,
+        durBeats: durBeats,
+        vel: n.velocity || 0.8,
+        ticks: n.ticks + num * ppq,
+        dur: n.durationTicks
       });
     });
 
+    // Calcular duración rítmica VexFlow y silencios >= 0.25 pulsos
+    const rests = [];
+    for (let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      const next = notes[i + 1];
+      const noteEnd = n.startBeat + n.durBeats;
+      const rawGap = next ? (next.startBeat - noteEnd) : 0;
+
+      // Si hay un micro-espacio de articulación (< 0.25 pulsos), ajustar al pulso real de la figura
+      const effectiveBeats = (next && rawGap > 0 && rawGap < 0.25)
+        ? (next.startBeat - n.startBeat)
+        : n.durBeats;
+
+      const matched = matchVexDuration(effectiveBeats);
+      n.vexCode = matched.code;
+      n.vexDotted = matched.dotted;
+      n.notationBeats = matched.beats;
+      n.beatIndex = Math.floor(n.startBeat + 0.001);
+
+      // Si entre el final de una nota y el inicio de la siguiente hay silencio >= 0.25 pulsos
+      if (next && rawGap >= 0.25) {
+        let rem = rawGap;
+        let curRestBeat = noteEnd;
+        let safety = 0;
+        while (rem >= 0.24 && safety++ < 16) {
+          let chosen = DUR_TABLE[DUR_TABLE.length - 1];
+          for (const item of DUR_TABLE) {
+            if (item.beats <= rem + 0.04) {
+              chosen = item;
+              break;
+            }
+          }
+          rests.push({
+            startBeat: curRestBeat,
+            durBeats: chosen.beats,
+            vexCode: chosen.code + "r",
+            vexDotted: chosen.dotted
+          });
+          curRestBeat += chosen.beats;
+          rem -= chosen.beats;
+        }
+      }
+    }
+
     song = {
-      notes, bpm, ppq, num, lead: num,
+      notes,
+      rests,
+      bpm,
+      ppq,
+      num,
+      lead: num,
       endBeat: Math.max(1, notes.reduce((m, n) => Math.max(m, n.startBeat + n.durBeats), 0) + 1.5)
     };
 
@@ -837,10 +938,13 @@ window.addEventListener("load", () => {
     }
   });
 
-  /* ============ 6. Dibujo adaptativo a cualquier pantalla ============ */
+  /* ============ 6. Dibujo adaptativo y VexFlow 4 ============ */
   const cv = el("cv"), ctx = cv.getContext("2d"), stage = el("stage");
+  const vfRenderer = VF ? new VF.Renderer(cv, VF.Renderer.Backends.CANVAS) : null;
+  const vfCtx = vfRenderer ? vfRenderer.getContext() : null;
+
   let W = 800, H = 450, dpr = 1;
-  const L = {}; // Geometría calculada dinámicamente
+  const L = {};
   const widthOf = h => 0.16 * h;
   const HOLE_Y = [0.21, 0.31, 0.39, 0.47, 0.60, 0.68, 0.76, 0.84];
 
@@ -849,7 +953,6 @@ window.addEventListener("load", () => {
     const isLandscapeMobile = H < 500 && W > H;
 
     if (isPortraitMobile) {
-      // Celular vertical: escala compacta para que las notas entrantes no se amontonen
       L.sp = Math.max(9.5, Math.min(12.2, W * 0.03));
       const staffH = 4 * L.sp;
       const topLabelPad = 30;
@@ -875,7 +978,6 @@ window.addEventListener("load", () => {
       L.pulseScale = 0.78;
 
     } else if (isLandscapeMobile) {
-      // Celular horizontal: paso horizontal reducido para leer cómodo incluso rápido
       L.sp = Math.max(9.5, Math.min(12.5, H * 0.038));
       const staffH = 4 * L.sp;
       const topPad = Math.max(26, H * 0.10);
@@ -898,7 +1000,6 @@ window.addEventListener("load", () => {
       L.pulseScale = 0.72;
 
     } else {
-      // Computador / Tablet amplia
       L.sp = Math.max(13, Math.min(18, H * 0.028, W * 0.022));
       const staffH = 4 * L.sp;
       const topPad = Math.max(40, H * 0.09);
@@ -1068,58 +1169,50 @@ window.addEventListener("load", () => {
     ctx.restore();
   }
 
-  const STEP = { "C5":-2, "D5":-1, "E5":0, "F5":1, "F#5":1, "G5":2, "A5":3, "B5":4, "C6":5, "D6":6 };
-  const stepY = st => L.staffTop + 4 * L.sp - st * L.sp / 2;
+  /* ============ Pentagrama profesional con VexFlow 4 ============ */
+  function drawStaffVexFlow(beat, active) {
+    if (!VF || !vfCtx) return;
 
-  function drawClef(cx) {
-    const sp = L.sp;
-    const X = u => cx + u * sp, Y = u => L.staffTop + u * sp;
-    ctx.save();
-    ctx.strokeStyle = "#334155";
-    ctx.fillStyle = "#334155";
-    ctx.lineWidth = Math.max(2, sp * 0.17);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(X(-0.6), Y(4.7));
-    ctx.bezierCurveTo(X(-0.5), Y(5.5), X(0.55), Y(5.5), X(0.55), Y(4.5));
-    ctx.lineTo(X(0.2), Y(-0.4));
-    ctx.bezierCurveTo(X(0.2), Y(-1.6), X(1.2), Y(-1.6), X(1.0), Y(-0.4));
-    ctx.bezierCurveTo(X(0.9), Y(0.8), X(-1.0), Y(1.8), X(-1.0), Y(3.0));
-    ctx.bezierCurveTo(X(-1.1), Y(4.4), X(1.2), Y(4.4), X(1.2), Y(3.0));
-    ctx.bezierCurveTo(X(1.2), Y(1.8), X(-0.6), Y(1.9), X(-0.6), Y(3.0));
-    ctx.bezierCurveTo(X(-0.6), Y(3.7), X(0.3), Y(3.8), X(0.4), Y(3.1));
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(X(-0.6), Y(4.7), Math.max(2, sp * 0.18), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawStaff(beat, active) {
     const sp = L.sp;
     const bottom = L.staffTop + 4 * sp;
     const marginX = Math.max(10, W * 0.012);
-    const staffClipX = L.clefX + sp * 1.55;
+    const staffClipX = L.clefX + sp * 1.95;
 
-    // 5 líneas del pentagrama en gris suave (#CBD5E1)
-    ctx.strokeStyle = "#CBD5E1";
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = "butt";
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(marginX, L.staffTop + i * sp);
-      ctx.lineTo(W - marginX, L.staffTop + i * sp);
-      ctx.stroke();
-    }
-    drawClef(L.clefX);
+    vfCtx.save();
 
+    // 1. Pentagrama base (5 líneas en gris suave #CBD5E1)
+    const baseStave = new VF.Stave(marginX, L.staffTop, W - 2 * marginX, {
+      spacing_between_lines_px: sp,
+      space_above_staff_ln: 0,
+      space_below_staff_ln: 0,
+      left_bar: false,
+      right_bar: false
+    });
+    baseStave.setStyle({ strokeStyle: "#CBD5E1", fillStyle: "#CBD5E1" });
+    baseStave.setContext(vfCtx).draw();
+
+    // 2. Clave de Sol fija a la izquierda en gris pizarra (#334155)
+    const clefStave = new VF.Stave(marginX, L.staffTop, Math.max(60, sp * 4.5), {
+      spacing_between_lines_px: sp,
+      space_above_staff_ln: 0,
+      space_below_staff_ln: 0,
+      left_bar: false,
+      right_bar: false
+    });
+    clefStave.setStyle({ strokeStyle: "#334155", fillStyle: "#334155" });
+    clefStave.addClef("treble");
+    clefStave.format();
+    clefStave.getModifiers().forEach(mod => {
+      mod.setStave(clefStave).setContext(vfCtx).draw();
+    });
+
+    // Área recortada para notas, silencios y barras de compás que avanzan
     ctx.save();
     ctx.beginPath();
-    ctx.rect(staffClipX, L.staffTop - sp * 3.2, W - staffClipX, H - (L.staffTop - sp * 3.2));
+    ctx.rect(staffClipX, L.staffTop - sp * 4.2, W - staffClipX, H - (L.staffTop - sp * 4.2));
     ctx.clip();
 
-    // Barras de compás en gris suave (#CBD5E1)
+    // 3. Líneas divisorias de compás en gris suave (#CBD5E1)
     const m = song.num;
     let b = Math.max(m, Math.ceil((beat - (L.contactX - staffClipX) / L.pxBeat) / m) * m);
     for (; ; b += m) {
@@ -1133,87 +1226,159 @@ window.addEventListener("load", () => {
       ctx.stroke();
     }
 
-    // Notas musicales escaladas según L.sp
-    const rx = sp * 0.62;
-    const ry = sp * 0.44;
-    const stemOffset = rx * 0.9;
+    const noteStartX = baseStave.getNoteStartX();
+    const visibleDrawables = [];
+    const beamGroups = [];
+    let currentBeamGroup = null;
 
-    for (const n of song.notes) {
+    // 4. Construcción manual de StaveNotes posicionados con TickContext en la X exacta de cada flauta
+    for (let i = 0; i < song.notes.length; i++) {
+      const n = song.notes[i];
       const x = L.contactX + (n.startBeat - beat) * L.pxBeat;
-      if (x > W + 40) break;
-      if (x < staffClipX - 24) continue;
-      const st = STEP[n.key], y = stepY(st);
 
-      // Líneas adicionales (Do5)
-      ctx.strokeStyle = "#94A3B8";
-      ctx.lineWidth = 1.5;
-      for (let l = -2; l >= st; l -= 2) {
-        ctx.beginPath();
-        ctx.moveTo(x - sp * 0.95, stepY(l));
-        ctx.lineTo(x + sp * 0.95, stepY(l));
-        ctx.stroke();
-      }
-
-      // Sostenido
-      if (n.key.indexOf("#") > -1) {
-        ctx.strokeStyle = "#334155";
-        ctx.lineWidth = Math.max(1.4, sp * 0.11);
-        ctx.beginPath();
-        ctx.moveTo(x - sp * 1.65, y - sp * 0.55); ctx.lineTo(x - sp * 1.65, y + sp * 0.55);
-        ctx.moveTo(x - sp * 1.30, y - sp * 0.62); ctx.lineTo(x - sp * 1.30, y + sp * 0.50);
-        ctx.lineWidth = Math.max(2.2, sp * 0.18);
-        ctx.moveTo(x - sp * 1.90, y - sp * 0.14); ctx.lineTo(x - sp * 1.05, y - sp * 0.32);
-        ctx.moveTo(x - sp * 1.90, y + sp * 0.32); ctx.lineTo(x - sp * 1.05, y + sp * 0.14);
-        ctx.stroke();
-      }
-
-      // Cabeza de nota con color
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(-0.35);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fillStyle = colorOf(n.key);
-      ctx.fill();
-      ctx.strokeStyle = "#334155";
-      ctx.lineWidth = Math.max(1.6, sp * 0.13);
-      ctx.stroke();
-      if (n.durBeats >= 2) {
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx * 0.6, ry * 0.4, -0.5, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fill();
-        ctx.lineWidth = Math.max(1.2, sp * 0.08);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Plica y corchete
-      ctx.strokeStyle = "#334155";
-      ctx.lineWidth = Math.max(1.6, sp * 0.12);
-      if (n.durBeats < 4) {
-        const down = st >= 4, sx = down ? x - stemOffset : x + stemOffset, ey = down ? y + 3.4 * sp : y - 3.4 * sp;
-        ctx.beginPath();
-        ctx.moveTo(sx, y);
-        ctx.lineTo(sx, ey);
-        if (n.durBeats < 1) {
-          ctx.moveTo(sx, ey);
-          ctx.quadraticCurveTo(sx + sp * 0.15, ey + (down ? -sp * 0.75 : sp * 0.75), sx + sp * 0.8, ey + (down ? -sp : sp));
+      if (x > W + 90) {
+        if (currentBeamGroup && currentBeamGroup.notes.length >= 2) {
+          beamGroups.push(currentBeamGroup);
         }
-        ctx.stroke();
+        currentBeamGroup = null;
+        break;
       }
 
-      // Aro indicador en la nota activa
-      if (n === active) {
-        ctx.strokeStyle = "#4F46E5";
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.arc(x, y, sp * 1.25, 0, Math.PI * 2);
-        ctx.stroke();
+      if (x < staffClipX - 90) {
+        continue;
+      }
+
+      const staveNote = new VF.StaveNote({
+        keys: [n.vexKey],
+        duration: n.vexCode,
+        auto_stem: true
+      });
+
+      if (n.vexAcc) {
+        staveNote.addModifier(new VF.Accidental(n.vexAcc), 0);
+      }
+      if (n.vexDotted) {
+        VF.Dot.buildAndAttach([staveNote]);
+      }
+
+      // Conservar código de colores de cada nota
+      staveNote.setStyle({ fillStyle: n.color, strokeStyle: n.color });
+      staveNote.setKeyStyle(0, { fillStyle: n.color, strokeStyle: n.color });
+      staveNote.setStave(baseStave);
+
+      // Posicionar manualmente con TickContext en la coordenada X exacta de su flauta
+      const tc = new VF.TickContext();
+      tc.addTickable(staveNote);
+      tc.preFormat();
+      const halfHeadW = (staveNote.getGlyphWidth() || 10) / 2;
+      tc.setX(x - noteStartX - halfHeadW);
+
+      visibleDrawables.push({
+        staveNote,
+        x,
+        isActive: n === active
+      });
+
+      // Agrupar corcheas ("8") y semicorcheas ("16") consecutivas dentro del mismo pulso
+      const isBeamable = (n.vexCode === "8" || n.vexCode === "16");
+      if (isBeamable) {
+        const isContiguous = currentBeamGroup &&
+          currentBeamGroup.beatIndex === n.beatIndex &&
+          Math.abs(currentBeamGroup.expectedNextBeat - n.startBeat) < 0.06;
+
+        if (isContiguous) {
+          currentBeamGroup.notes.push(staveNote);
+          currentBeamGroup.colors.push(n.color);
+          currentBeamGroup.expectedNextBeat = n.startBeat + n.notationBeats;
+        } else {
+          if (currentBeamGroup && currentBeamGroup.notes.length >= 2) {
+            beamGroups.push(currentBeamGroup);
+          }
+          currentBeamGroup = {
+            beatIndex: n.beatIndex,
+            notes: [staveNote],
+            colors: [n.color],
+            expectedNextBeat: n.startBeat + n.notationBeats
+          };
+        }
+      } else {
+        if (currentBeamGroup && currentBeamGroup.notes.length >= 2) {
+          beamGroups.push(currentBeamGroup);
+        }
+        currentBeamGroup = null;
       }
     }
 
-    // Línea vertical de lectura alineada exactamente con el centro de la flauta monitora (L.recvX)
+    if (currentBeamGroup && currentBeamGroup.notes.length >= 2) {
+      beamGroups.push(currentBeamGroup);
+    }
+
+    // 5. Silencios (>= 0.25 pulsos) en gris suave (#94A3B8)
+    for (let i = 0; i < song.rests.length; i++) {
+      const r = song.rests[i];
+      const x = L.contactX + (r.startBeat - beat) * L.pxBeat;
+      if (x > W + 60) break;
+      if (x < staffClipX - 60) continue;
+
+      const restNote = new VF.StaveNote({
+        keys: ["b/4"],
+        duration: r.vexCode
+      });
+
+      if (r.vexDotted) {
+        VF.Dot.buildAndAttach([restNote]);
+      }
+
+      restNote.setStyle({ fillStyle: "#94A3B8", strokeStyle: "#94A3B8" });
+      restNote.setKeyStyle(0, { fillStyle: "#94A3B8", strokeStyle: "#94A3B8" });
+      restNote.setStave(baseStave);
+
+      const tc = new VF.TickContext();
+      tc.addTickable(restNote);
+      tc.preFormat();
+      const halfHeadW = (restNote.getGlyphWidth() || 10) / 2;
+      tc.setX(x - noteStartX - halfHeadW);
+
+      visibleDrawables.push({
+        staveNote: restNote,
+        x,
+        isActive: false
+      });
+    }
+
+    // 6. Crear Vex.Flow.Beam antes de dibujar para alinear plicas y ocultar corchetes sueltos
+    const vfBeams = beamGroups.map(grp => {
+      const beam = new VF.Beam(grp.notes, true);
+      const sameColor = grp.colors.every(c => c === grp.colors[0]);
+      const beamColor = sameColor ? grp.colors[0] : "#334155";
+      beam.setStyle({ fillStyle: beamColor, strokeStyle: beamColor });
+      return beam;
+    });
+
+    // 7. Dibujar todas las notas y silencios en el contexto
+    for (const item of visibleDrawables) {
+      item.staveNote.setContext(vfCtx).draw();
+
+      // Aro indicador suave en la nota que está sonando
+      if (item.isActive) {
+        const ys = item.staveNote.getYs();
+        const noteY = (ys && ys.length) ? ys[0] : (L.staffTop + 2 * sp);
+        ctx.save();
+        ctx.strokeStyle = "#4F46E5";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(item.x, noteY, sp * 1.25, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 8. Dibujar las barras de agrupación (Beams)
+    for (const beam of vfBeams) {
+      beam.setContext(vfCtx).draw();
+    }
+
+    // 9. Línea vertical de lectura alineada con el centro de la flauta monitora (L.recvX)
     const lineTop = L.cy + L.recvH * 0.5 + 4;
     const lineBot = Math.min(H - 6, bottom + sp * 1.5);
     ctx.strokeStyle = "#818CF8";
@@ -1227,6 +1392,7 @@ window.addEventListener("load", () => {
     ctx.setLineDash([]);
 
     ctx.restore();
+    vfCtx.restore();
   }
 
   const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
@@ -1259,7 +1425,7 @@ window.addEventListener("load", () => {
       ctx.font = `700 ${moveFontSize}px 'Nunito', sans-serif`;
       ctx.textBaseline = "alphabetic";
       ctx.fillText(n.label, x, topMove - Math.max(5, L.moveH * 0.045));
-      drawFlute(x, topMove, L.moveH, holesOf(n.key), false, colorOf(n.key), false);
+      drawFlute(x, topMove, L.moveH, holesOf(n.key), false, n.color, false);
     }
     ctx.restore();
 
@@ -1280,11 +1446,12 @@ window.addEventListener("load", () => {
       L.recvH,
       active ? holesOf(active.key) : [0,0,0,0,0,0,0,0],
       !!active,
-      active ? colorOf(active.key) : "#334155",
+      active ? active.color : "#334155",
       true
     );
 
-    drawStaff(beat, active);
+    // Pentagrama renderizado con VexFlow 4
+    drawStaffVexFlow(beat, active);
 
     if (song.notes.length > 0) {
       const spb = 60 / (song.bpm * speed), cur = Math.min(beat, song.endBeat);
