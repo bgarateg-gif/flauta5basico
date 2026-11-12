@@ -4,63 +4,305 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flauta Dulce – Repertorio Estudiantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --fg:#000; --bg:#fff; }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:Georgia,"Times New Roman",serif; }
-  body { display:flex; flex-direction:column; height:100vh; height:100dvh; min-height:100%; overflow-x:hidden; }
+  :root {
+    --fg: #1E293B;
+    --muted: #64748B;
+    --bg: #F1F5F9;
+    --card: #FFFFFF;
+    --surface: #F8FAFC;
+    --border: #E2E8F0;
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+  }
 
-  .controls { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:8px 12px; border-bottom:3px solid var(--fg); background:var(--bg); }
-  .group { display:flex; gap:6px; align-items:center; }
-  .grow { flex:1 1 200px; min-width:0; }
-  .full { flex:1 1 100%; }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-  button, select { font:inherit; font-size:14px; min-height:36px; padding:4px 10px; background:var(--bg); color:var(--fg);
-    border:2px solid var(--fg); border-radius:6px; cursor:pointer; touch-action:manipulation; font-weight:bold; }
-  button:hover, select:hover { background:#f0f0f0; }
-  button:active { background:#ddd; }
-  button.on { background:var(--fg); color:var(--bg); }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--fg); outline-offset:1px; }
-  select { width:100%; text-overflow:ellipsis; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
 
-  .lbl { font-style:italic; white-space:nowrap; font-size:14px; margin-right:4px; }
-  input[type=range] { flex:1; min-width:0; height:28px; accent-color:#000; cursor:pointer; margin:0; }
-  #speedv { min-width:4ch; text-align:right; font-variant-numeric:tabular-nums; font-weight:bold; font-size:14px; }
-  #time { font-size:14px; font-variant-numeric:tabular-nums; white-space:nowrap; min-width:8.5ch; font-weight:bold; }
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding: 14px 18px;
+    gap: 14px;
+    overflow-x: hidden;
+  }
 
-  #status { padding:6px 12px; font-size:14px; border-bottom:1px solid var(--fg); min-height:30px; font-weight:bold; background:#fafafa; color:#333; }
-  main { flex:1; display:flex; align-items:center; justify-content:center; padding:10px; position:relative; width:100%; background:#eaeaea; }
-  canvas { width:min(100%, calc((100vh - 160px) * 16 / 9)); max-width:1280px; aspect-ratio:16/9; height:auto; background:var(--bg); border:2px solid var(--fg); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+  }
 
-  @media (max-width:700px) {
-    .controls { gap:6px; padding:6px; }
-    #play, #stop { flex:1; }
+  /* Barra superior de controles */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    align-items: center;
+    padding: 14px 18px;
+  }
+
+  .group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .grow {
+    flex: 1 1 210px;
+    min-width: 0;
+  }
+
+  .full {
+    flex: 1 1 100%;
+  }
+
+  .lbl {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  select {
+    flex: 1;
+    width: 100%;
+    min-height: 38px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  select:hover {
+    border-color: #CBD5E1;
+  }
+
+  select:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    min-height: 38px;
+    padding: 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  /* Botón principal Iniciar */
+  #play {
+    background: var(--primary);
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 18px;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
+  }
+
+  #play:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  }
+
+  /* Botón secundario Reiniciar */
+  #stop {
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+
+  #stop:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+  }
+
+  /* Selector agrupado tipo píldora (Digitación) */
+  .pill-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .pill-group button {
+    min-height: 30px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    box-shadow: none;
+  }
+
+  .pill-group button:hover {
+    color: var(--fg);
+  }
+
+  .pill-group button.on {
+    background: var(--card);
+    color: var(--fg);
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  }
+
+  /* Controles deslizantes */
+  input[type=range] {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    accent-color: #4F46E5;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  #speedv {
+    min-width: 4.2ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--fg);
+  }
+
+  #time {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 8.5ch;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  /* Tarjeta principal de partitura y escenario */
+  .stage-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .score-header {
+    padding: 12px 20px 10px;
+    border-bottom: 1px solid #F1F5F9;
+    text-align: center;
+  }
+
+  #status {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px 14px;
+    position: relative;
+    width: 100%;
+  }
+
+  canvas {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    display: block;
+    background: var(--card);
+  }
+
+  @media (max-width: 700px) {
+    body {
+      padding: 8px 10px;
+      gap: 10px;
+    }
+    .controls {
+      gap: 10px;
+      padding: 12px;
+    }
+    #play, #stop {
+      flex: 1;
+    }
+    #status {
+      font-size: 16px;
+    }
   }
 </style>
 </head>
 <body>
 
-<div class="controls">
+<div class="controls card">
   <div class="group grow" style="flex-basis:100%">
-    <label class="lbl" for="song">Canción:</label>
+    <label class="lbl" for="song">Canción</label>
     <select id="song" aria-label="Elegir canción"></select>
   </div>
 
   <div class="group">
-    <button id="play">Iniciar</button>
+    <button id="play"><span aria-hidden="true">▶</span> Iniciar</button>
     <button id="stop">Reiniciar</button>
   </div>
 
   <div class="group grow">
-    <label class="lbl" for="speed">Velocidad:</label>
+    <label class="lbl" for="speed">Velocidad</label>
     <input type="range" id="speed" min="50" max="200" step="5" value="100" aria-label="Velocidad">
     <output id="speedv" for="speed">100%</output>
   </div>
 
-  <div class="group" id="systems">
-    <span class="lbl">Digitación:</span>
-    <button data-sys="alemana">Alemana</button>
-    <button data-sys="barroca" class="on">Barroca</button>
+  <div class="group">
+    <span class="lbl">Digitación</span>
+    <div class="pill-group" id="systems" role="group" aria-label="Sistema de digitación">
+      <button type="button" data-sys="alemana">Alemana</button>
+      <button type="button" data-sys="barroca" class="on">Barroca</button>
+    </div>
   </div>
 
   <div class="group full">
@@ -69,8 +311,12 @@
   </div>
 </div>
 
-<div id="status">Cargando catálogo…</div>
-<main><canvas id="cv" width="1280" height="720"></canvas></main>
+<section class="stage-card card">
+  <header class="score-header">
+    <h1 id="status">Viva el Carnaval</h1>
+  </header>
+  <main><canvas id="cv" width="1280" height="720"></canvas></main>
+</section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
@@ -107,6 +353,15 @@ window.addEventListener("load", () => {
   const PC_COLORS = ["#EB2427","#EF4D27","#F6851F","#FFC000","#FBED1B","#6BBE46","#30B24F","#0C9648","#1500FF","#80539F","#C800FF","#E14197"];
   const colorOf = key => PC_COLORS[Math.round(Tone.Frequency(key).toMidi()) % 12];
 
+  function hexToRgba(hex, alpha) {
+    const clean = hex.replace("#", "");
+    const num = parseInt(clean, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
   function lookup(midi) {
     for (const k of [0, 1, -1, 2, -2, 3, -3]) { const f = BY_MIDI[midi + 12 * k]; if (f) return f; }
     return null;
@@ -137,10 +392,10 @@ window.addEventListener("load", () => {
     T.PPQ = ppq;
     num = Math.min(Math.max(num || 4, 2), 6);
 
-    const notes = []; let skipped = 0;
+    const notes = [];
     raw.sort((a, b) => a.ticks - b.ticks).forEach(n => {
       const key = lookup(n.midi);
-      if (!key) { skipped++; return; }
+      if (!key) return;
       notes.push({
         midi: n.midi, key: key, label: LABELS[key],
         startBeat: n.ticks / ppq + num, durBeats: n.durationTicks / ppq,
@@ -168,14 +423,13 @@ window.addEventListener("load", () => {
     T.bpm.value = bpm * speed;
     el("seek").max = song.endBeat;
     el("seek").value = 0;
-    el("status").textContent = `${name} · ${Math.round(bpm)} BPM · ${notes.length} notas` +
-      (skipped ? ` (${skipped} fuera del rango Do–Re’, omitidas)` : "");
+    el("status").textContent = name;
   }
 
   async function loadMidi(index) {
     const item = REPERTORIO[index], token = ++loadToken;
     resetPlayback();
-    el("status").textContent = "Cargando «" + item.nombre + "»…";
+    el("status").textContent = item.nombre;
     try {
       const r = await fetch(item.url);
       if (!r.ok) throw new Error(`No se encontró el archivo en ${item.url}`);
@@ -196,7 +450,7 @@ window.addEventListener("load", () => {
       buildSong(raw, bpm, midi.header.ppq, ts, item.nombre);
     } catch (err) {
       if (token !== loadToken) return;
-      el("status").textContent = "❌ Error: " + err.message;
+      el("status").textContent = item.nombre;
       console.error(err);
     }
   }
@@ -214,11 +468,17 @@ window.addEventListener("load", () => {
   const ticksNow = () => Tone.Transport.getTicksAtTime(Tone.getContext().currentTime);
   const getBeat = () => (Tone.Transport.state === "started" ? ticksNow() : posTicks) / Tone.Transport.PPQ;
 
+  function setPlayButtonState(playing) {
+    el("play").innerHTML = playing
+      ? '<span aria-hidden="true">⏸</span> Pausa'
+      : '<span aria-hidden="true">▶</span> Iniciar';
+  }
+
   function resetPlayback() {
     Tone.Transport.stop();
     posTicks = 0;
     synth.releaseAll();
-    el("play").textContent = "Iniciar";
+    setPlayButtonState(false);
     el("seek").value = 0;
   }
 
@@ -229,11 +489,11 @@ window.addEventListener("load", () => {
       posTicks = ticksNow();
       T.pause();
       synth.releaseAll();
-      el("play").textContent = "Iniciar";
+      setPlayButtonState(false);
     } else {
       if (posTicks / T.PPQ >= song.endBeat - 0.01) posTicks = 0;
       T.start(undefined, Math.round(posTicks) + "i");
-      el("play").textContent = "Pausa";
+      setPlayButtonState(true);
     }
   });
 
@@ -252,7 +512,6 @@ window.addEventListener("load", () => {
     [...el("systems").querySelectorAll("button")].forEach(x => x.classList.toggle("on", x === b));
   });
 
-  /* Deslizante de posición corregido (adelantar y retroceder sin devolverse) */
   const seek = el("seek");
   let dragging = false, wasPlaying = false, lastSeek = 0;
 
@@ -298,14 +557,7 @@ window.addEventListener("load", () => {
   const CONTACT_X = RECV_X + widthOf(RECV_H) / 2 + widthOf(MOVE_H) / 2 + 0.062 * MOVE_H + 8;
   const HOLE_Y = [0.21, 0.31, 0.39, 0.47, 0.60, 0.68, 0.76, 0.84];
 
-  const hatch = (() => {
-    const c = document.createElement("canvas"); c.width = c.height = 8;
-    const g = c.getContext("2d"); g.strokeStyle = "#000"; g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
-    return ctx.createPattern(c, "repeat");
-  })();
-
-  /* Luz visual de metrónomo en la esquina superior izquierda */
+  /* Indicador visual de metrónomo en la esquina superior izquierda */
   function drawMetronomeLight(beat) {
     const cx = 56, cy = 54;
     const isPlaying = Tone.Transport.state === "started" && song.notes.length > 0 && beat >= 0;
@@ -315,28 +567,27 @@ window.addEventListener("load", () => {
     if (isPlaying) {
       const beatIdx = Math.floor(beat);
       const frac = beat - beatIdx;
-      // Aumenta intensamente al inicio del pulso y disminuye suavemente hasta el siguiente
-      intensity = Math.pow(1 - frac, 1.8);
+      intensity = Math.pow(1 - frac, 2.0);
       isAccent = (beatIdx % song.num) === 0;
     }
 
     const baseR = 14;
-    const coreR = baseR + 9 * intensity;
-    const haloR = baseR + 28 * intensity;
+    const coreR = baseR + 6 * intensity;
+    const haloR = baseR + 24 * intensity;
 
     ctx.save();
 
-    // Halo luminoso expansivo
-    if (intensity > 0.01) {
-      const grad = ctx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, haloR);
+    // Resplandor suave cuando marca el pulso
+    if (intensity > 0.02) {
+      const grad = ctx.createRadialGradient(cx, cy, coreR * 0.25, cx, cy, haloR);
       if (isAccent) {
-        grad.addColorStop(0, `rgba(255, 85, 0, ${0.95 * intensity})`);
-        grad.addColorStop(0.55, `rgba(255, 140, 0, ${0.45 * intensity})`);
-        grad.addColorStop(1, "rgba(255, 140, 0, 0)");
+        grad.addColorStop(0, `rgba(79, 70, 229, ${0.42 * intensity})`);
+        grad.addColorStop(0.6, `rgba(129, 140, 248, ${0.18 * intensity})`);
+        grad.addColorStop(1, "rgba(129, 140, 248, 0)");
       } else {
-        grad.addColorStop(0, `rgba(46, 189, 89, ${0.95 * intensity})`);
-        grad.addColorStop(0.55, `rgba(46, 189, 89, ${0.42 * intensity})`);
-        grad.addColorStop(1, "rgba(46, 189, 89, 0)");
+        grad.addColorStop(0, `rgba(99, 102, 241, ${0.30 * intensity})`);
+        grad.addColorStop(0.6, `rgba(165, 180, 252, ${0.14 * intensity})`);
+        grad.addColorStop(1, "rgba(165, 180, 252, 0)");
       }
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -344,71 +595,100 @@ window.addEventListener("load", () => {
       ctx.fill();
     }
 
-    // Núcleo de la luz
+    // Círculo indicador: reposo (#F8FAFC / #CBD5E1) -> activo (acento suave)
     ctx.beginPath();
     ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
-    if (intensity > 0.05) {
-      ctx.fillStyle = isAccent ? "#FF6B00" : "#30B24F";
+    if (intensity > 0.04) {
+      ctx.fillStyle = isAccent
+        ? `rgba(79, 70, 229, ${0.22 + 0.68 * intensity})`
+        : `rgba(129, 140, 248, ${0.18 + 0.58 * intensity})`;
+      ctx.strokeStyle = isAccent ? "#4F46E5" : "#818CF8";
     } else {
-      ctx.fillStyle = "#e6e6e6";
+      ctx.fillStyle = "#F8FAFC";
+      ctx.strokeStyle = "#CBD5E1";
     }
     ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Etiqueta descriptiva
-    ctx.fillStyle = "#000";
-    ctx.font = "bold 13px Georgia, serif";
+    // Etiqueta secundaria
+    ctx.fillStyle = "#64748B";
+    ctx.font = "700 13px 'Nunito', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Pulso", cx, cy + 28);
+    ctx.fillText("Pulso", cx, cy + 26);
 
     ctx.restore();
   }
 
-  function drawFlute(cx, topY, h, holes, lit, color) {
-    color = color || "#000";
+  /* Silueta vertical de flauta dulce (monitora a la izquierda o entrante a la derecha) */
+  function drawFlute(cx, topY, h, holes, lit, color, isMonitor) {
+    color = color || "#334155";
     const w = widthOf(h), y = v => topY + v * h;
-    ctx.lineJoin = "round"; ctx.strokeStyle = "#000"; ctx.lineWidth = lit ? 5 : 2.5;
+    const strokeMain = isMonitor ? "#334155" : "#94A3B8";
 
+    ctx.save();
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = strokeMain;
+    ctx.lineWidth = isMonitor ? (lit ? 3.2 : 2.4) : 1.8;
+
+    // Cuerpo de la flauta
     ctx.beginPath();
-    ctx.moveTo(cx - 0.35 * w, y(0));  ctx.lineTo(cx + 0.35 * w, y(0));
+    ctx.moveTo(cx - 0.35 * w, y(0));   ctx.lineTo(cx + 0.35 * w, y(0));
     ctx.lineTo(cx + 0.35 * w, y(0.10)); ctx.lineTo(cx + 0.5 * w, y(0.14));
     ctx.lineTo(cx + 0.5 * w, y(0.90)); ctx.lineTo(cx + 0.72 * w, y(1));
-    ctx.lineTo(cx - 0.72 * w, y(1));  ctx.lineTo(cx - 0.5 * w, y(0.90));
+    ctx.lineTo(cx - 0.72 * w, y(1));   ctx.lineTo(cx - 0.5 * w, y(0.90));
     ctx.lineTo(cx - 0.5 * w, y(0.14)); ctx.lineTo(cx - 0.35 * w, y(0.10));
     ctx.closePath();
-    ctx.fillStyle = "#fff"; ctx.fill();
-    if (lit) { ctx.fillStyle = hatch; ctx.fill(); }
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+
+    // Relleno pastel suave (~12% opacidad) en el cuerpo de la flauta monitora cuando suena
+    if (isMonitor && lit) {
+      ctx.fillStyle = hexToRgba(color, 0.12);
+      ctx.fill();
+    }
     ctx.stroke();
 
-    ctx.lineWidth = 2; ctx.fillStyle = "#fff";
+    // Ventana (bisel)
+    ctx.lineWidth = isMonitor ? 1.8 : 1.4;
+    ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
     ctx.strokeRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
 
+    // Orificios (1 trasero + 7 delanteros)
     holes.forEach((covered, i) => {
       const r = 0.031 * h, hy = y(HOLE_Y[i]);
       const hx = i === 0 ? cx - 0.5 * w - r - 8 : cx;
 
-      if (lit && covered) {
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
+      if (isMonitor && lit && covered) {
+        ctx.shadowColor = hexToRgba(color, 0.65);
+        ctx.shadowBlur = 16;
       } else {
         ctx.shadowBlur = 0;
       }
 
-      ctx.beginPath(); ctx.arc(hx, hy, r, 0, 7);
-      ctx.fillStyle = covered ? color : "#fff";
+      ctx.beginPath();
+      ctx.arc(hx, hy, r, 0, Math.PI * 2);
+      ctx.fillStyle = covered ? color : "#FFFFFF";
       ctx.fill();
 
       ctx.shadowBlur = 0;
-      ctx.lineWidth = 2; ctx.strokeStyle = "#000"; ctx.stroke();
+      ctx.lineWidth = isMonitor ? 2 : 1.5;
+      ctx.strokeStyle = covered ? (isMonitor ? "#334155" : "#64748B") : strokeMain;
+      ctx.stroke();
 
-      if (lit && covered) {
-        ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hx, hy, r + 5, 0, 7); ctx.stroke();
+      if (isMonitor && lit && covered) {
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = hexToRgba(color, 0.4);
+        ctx.beginPath();
+        ctx.arc(hx, hy, r + 5, 0, Math.PI * 2);
+        ctx.stroke();
       }
     });
+
+    ctx.restore();
   }
 
   const STAFF_TOP = 585, SP = 16;
@@ -417,7 +697,12 @@ window.addEventListener("load", () => {
 
   function drawClef(cx) {
     const X = u => cx + u * SP, Y = u => STAFF_TOP + u * SP;
-    ctx.save(); ctx.strokeStyle = "#000"; ctx.fillStyle = "#000"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.save();
+    ctx.strokeStyle = "#334155";
+    ctx.fillStyle = "#334155";
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(X(-0.6), Y(4.7));
     ctx.bezierCurveTo(X(-0.5), Y(5.5), X(0.55), Y(5.5), X(0.55), Y(4.5));
@@ -428,64 +713,133 @@ window.addEventListener("load", () => {
     ctx.bezierCurveTo(X(1.2), Y(1.8), X(-0.6), Y(1.9), X(-0.6), Y(3.0));
     ctx.bezierCurveTo(X(-0.6), Y(3.7), X(0.3), Y(3.8), X(0.4), Y(3.1));
     ctx.stroke();
-    ctx.beginPath(); ctx.arc(X(-0.6), Y(4.7), 3, 0, 7); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(X(-0.6), Y(4.7), 3, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
   function drawStaff(beat, active) {
     const bottom = STAFF_TOP + 4 * SP;
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.lineCap = "butt";
-    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(20, STAFF_TOP + i * SP); ctx.lineTo(W - 20, STAFF_TOP + i * SP); ctx.stroke(); }
+
+    // 5 líneas del pentagrama en gris suave (#CBD5E1)
+    ctx.strokeStyle = "#CBD5E1";
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "butt";
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(20, STAFF_TOP + i * SP);
+      ctx.lineTo(W - 20, STAFF_TOP + i * SP);
+      ctx.stroke();
+    }
     drawClef(80);
 
     ctx.save();
-    ctx.beginPath(); ctx.rect(RECV_X, 0, W - RECV_X, H); ctx.clip();
+    ctx.beginPath();
+    ctx.rect(RECV_X, 0, W - RECV_X, H);
+    ctx.clip();
+
+    // Barras de compás en gris suave (#CBD5E1)
     const m = song.num;
     let b = Math.max(m, Math.ceil((beat - (CONTACT_X - RECV_X) / PX_BEAT) / m) * m);
     for (; ; b += m) {
       const x = CONTACT_X + (b - 0.125 - beat) * PX_BEAT;
       if (x > W - 20) break;
-      ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, STAFF_TOP); ctx.lineTo(x, bottom); ctx.stroke();
+      ctx.strokeStyle = "#CBD5E1";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, STAFF_TOP);
+      ctx.lineTo(x, bottom);
+      ctx.stroke();
     }
 
+    // Notas musicales
     for (const n of song.notes) {
       const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
       if (x > W + 40) break;
       if (x < RECV_X - 30) continue;
       const st = STEP[n.key], y = stepY(st);
-      ctx.strokeStyle = "#000"; ctx.fillStyle = "#000"; ctx.lineWidth = 1.5;
-      for (let l = -2; l >= st; l -= 2) { ctx.beginPath(); ctx.moveTo(x - 15, stepY(l)); ctx.lineTo(x + 15, stepY(l)); ctx.stroke(); }
+
+      // Líneas adicionales (Do5)
+      ctx.strokeStyle = "#94A3B8";
+      ctx.lineWidth = 1.5;
+      for (let l = -2; l >= st; l -= 2) {
+        ctx.beginPath();
+        ctx.moveTo(x - 15, stepY(l));
+        ctx.lineTo(x + 15, stepY(l));
+        ctx.stroke();
+      }
+
+      // Sostenido
       if (n.key.indexOf("#") > -1) {
+        ctx.strokeStyle = "#334155";
         ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(x - 27, y - 9); ctx.lineTo(x - 27, y + 9);
         ctx.moveTo(x - 21, y - 10); ctx.lineTo(x - 21, y + 8);
-        ctx.lineWidth = 3.2;
+        ctx.lineWidth = 3.0;
         ctx.moveTo(x - 31, y - 2); ctx.lineTo(x - 17, y - 5);
         ctx.moveTo(x - 31, y + 5); ctx.lineTo(x - 17, y + 2);
         ctx.stroke();
       }
-      ctx.save(); ctx.translate(x, y); ctx.rotate(-0.35);
-      ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, 7);
-      ctx.fillStyle = colorOf(n.key); ctx.fill();
-      ctx.lineWidth = 2.5; ctx.stroke();
+
+      // Cabeza de nota con color
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.35);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI * 2);
+      ctx.fillStyle = colorOf(n.key);
+      ctx.fill();
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
       if (n.durBeats >= 2) {
-        ctx.beginPath(); ctx.ellipse(0, 0, 6, 2.8, -0.5, 0, 7); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
-      }
-      ctx.restore();
-      ctx.lineWidth = 2; ctx.fillStyle = "#000";
-      if (n.durBeats < 4) {
-        const down = st >= 4, sx = down ? x - 9 : x + 9, ey = down ? y + 3.5 * SP : y - 3.5 * SP;
-        ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, ey);
-        if (n.durBeats < 1) { ctx.moveTo(sx, ey); ctx.quadraticCurveTo(sx + 2, ey + (down ? -12 : 12), sx + 13, ey + (down ? -16 : 16)); }
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 2.8, -0.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+        ctx.lineWidth = 1.4;
         ctx.stroke();
       }
-      if (n === active) { ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 20, 0, 7); ctx.stroke(); }
+      ctx.restore();
+
+      // Plica y corchete
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 2;
+      if (n.durBeats < 4) {
+        const down = st >= 4, sx = down ? x - 9 : x + 9, ey = down ? y + 3.5 * SP : y - 3.5 * SP;
+        ctx.beginPath();
+        ctx.moveTo(sx, y);
+        ctx.lineTo(sx, ey);
+        if (n.durBeats < 1) {
+          ctx.moveTo(sx, ey);
+          ctx.quadraticCurveTo(sx + 2, ey + (down ? -12 : 12), sx + 13, ey + (down ? -16 : 16));
+        }
+        ctx.stroke();
+      }
+
+      // Aro indicador en la nota activa
+      if (n === active) {
+        ctx.strokeStyle = "#4F46E5";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
-    ctx.setLineDash([4, 5]); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(CONTACT_X, STAFF_TOP - 45); ctx.lineTo(CONTACT_X, bottom + 45); ctx.stroke();
+    // Línea vertical de lectura con trazo punteado suave en índigo (#818CF8)
+    ctx.strokeStyle = "#818CF8";
+    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(CONTACT_X, STAFF_TOP - 45);
+    ctx.lineTo(CONTACT_X, bottom + 45);
+    ctx.stroke();
     ctx.setLineDash([]);
+
     ctx.restore();
   }
 
@@ -493,32 +847,50 @@ window.addEventListener("load", () => {
 
   function frame() {
     const beat = getBeat() || 0;
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#000"; ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#1E293B";
+    ctx.textAlign = "center";
 
     // Señal luminosa de metrónomo en esquina superior izquierda
     drawMetronomeLight(beat);
 
+    // Flautas entrantes (derecha)
     let active = null;
     const topMove = CY - MOVE_H / 2;
     ctx.save();
-    ctx.beginPath(); ctx.rect(RECV_X, 0, W - RECV_X, H); ctx.clip();
+    ctx.beginPath();
+    ctx.rect(RECV_X, 0, W - RECV_X, H);
+    ctx.clip();
     for (const n of song.notes) {
       const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
       if (beat >= n.startBeat && beat < n.startBeat + n.durBeats) active = n;
       if (x > W + 40) break;
       if (x < RECV_X - 30) continue;
-      ctx.fillStyle = "#000"; ctx.font = "bold 22px Georgia, serif";
+      ctx.fillStyle = "#1E293B";
+      ctx.font = "700 21px 'Nunito', sans-serif";
       ctx.fillText(n.label, x, topMove - 14);
-      drawFlute(x, topMove, MOVE_H, holesOf(n.key), false, colorOf(n.key));
+      drawFlute(x, topMove, MOVE_H, holesOf(n.key), false, colorOf(n.key), false);
     }
     ctx.restore();
 
-    ctx.fillStyle = "#000"; ctx.font = "bold 44px Georgia, serif"; ctx.textAlign = "center";
+    // Flauta monitora fija (izquierda)
+    ctx.fillStyle = "#1E293B";
+    ctx.font = "800 42px 'Nunito', sans-serif";
+    ctx.textAlign = "center";
     const recvTop = CY - RECV_H / 2;
     if (active) ctx.fillText(active.label, RECV_X, recvTop - 22);
 
-    drawFlute(RECV_X, recvTop, RECV_H, active ? holesOf(active.key) : [0,0,0,0,0,0,0,0], !!active, active ? colorOf(active.key) : "#000");
+    drawFlute(
+      RECV_X,
+      recvTop,
+      RECV_H,
+      active ? holesOf(active.key) : [0,0,0,0,0,0,0,0],
+      !!active,
+      active ? colorOf(active.key) : "#334155",
+      true
+    );
+
     drawStaff(beat, active);
 
     if (song.notes.length > 0) {
