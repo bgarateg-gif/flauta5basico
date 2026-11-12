@@ -37,9 +37,21 @@
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
-    padding: 14px 18px;
-    gap: 14px;
-    overflow-x: hidden;
+    padding: 10px 14px;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  /* Modo pantalla completa (nativo + respaldo para iPhone/Safari) */
+  body.is-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 999999 !important;
+    background: var(--bg) !important;
+    padding: 6px 8px !important;
   }
 
   .card {
@@ -49,13 +61,14 @@
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
   }
 
-  /* Barra superior de controles */
+  /* ============ Barra superior de controles ============ */
   .controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 18px;
+    gap: 8px 16px;
     align-items: center;
-    padding: 14px 18px;
+    padding: 10px 16px;
+    flex-shrink: 0;
   }
 
   .group {
@@ -64,13 +77,34 @@
     align-items: center;
   }
 
-  .grow {
-    flex: 1 1 210px;
+  .song-group {
+    flex: 2 1 260px;
     min-width: 0;
   }
 
-  .full {
-    flex: 1 1 100%;
+  .speed-group {
+    flex: 1 1 190px;
+    min-width: 0;
+  }
+
+  .system-group {
+    flex: 0 0 auto;
+  }
+
+  .transport-group {
+    flex: 0 0 auto;
+  }
+
+  .seek-group {
+    flex: 1 1 280px;
+    min-width: 0;
+  }
+
+  .actions-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
   }
 
   .lbl {
@@ -83,8 +117,8 @@
   select {
     flex: 1;
     width: 100%;
-    min-height: 38px;
-    padding: 6px 12px;
+    min-height: 36px;
+    padding: 4px 12px;
     font: inherit;
     font-size: 14px;
     font-weight: 700;
@@ -94,7 +128,7 @@
     border-radius: 10px;
     cursor: pointer;
     text-overflow: ellipsis;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 0.15s ease;
   }
 
   select:hover {
@@ -112,8 +146,8 @@
     font: inherit;
     font-size: 14px;
     font-weight: 700;
-    min-height: 38px;
-    padding: 6px 14px;
+    min-height: 36px;
+    padding: 5px 14px;
     border-radius: 10px;
     cursor: pointer;
     touch-action: manipulation;
@@ -121,6 +155,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
+    white-space: nowrap;
     transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
   }
 
@@ -133,7 +168,7 @@
     background: var(--primary);
     color: #FFFFFF;
     border: none;
-    padding: 6px 18px;
+    padding: 5px 18px;
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
   }
 
@@ -142,16 +177,20 @@
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
   }
 
-  /* Botón secundario Reiniciar */
-  #stop {
+  /* Botones secundarios */
+  .btn-sec {
     background: var(--surface);
     color: var(--fg);
     border: 1px solid var(--border);
   }
 
-  #stop:hover {
+  .btn-sec:hover {
     background: #F1F5F9;
     border-color: #CBD5E1;
+  }
+
+  #toggle-extra {
+    display: none;
   }
 
   /* Selector agrupado tipo píldora (Digitación) */
@@ -166,8 +205,8 @@
   }
 
   .pill-group button {
-    min-height: 30px;
-    padding: 4px 14px;
+    min-height: 28px;
+    padding: 3px 12px;
     font-size: 13px;
     font-weight: 700;
     border: none;
@@ -190,7 +229,7 @@
   /* Controles deslizantes */
   input[type=range] {
     flex: 1;
-    min-width: 0;
+    min-width: 60px;
     height: 24px;
     accent-color: #4F46E5;
     cursor: pointer;
@@ -198,7 +237,7 @@
   }
 
   #speedv {
-    min-width: 4.2ch;
+    min-width: 4ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
     font-weight: 800;
@@ -210,12 +249,12 @@
     font-size: 13px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    min-width: 8.5ch;
+    min-width: 8ch;
     font-weight: 700;
     color: var(--muted);
   }
 
-  /* Tarjeta principal de partitura y escenario */
+  /* ============ Tarjeta principal de partitura ============ */
   .stage-card {
     flex: 1;
     min-height: 0;
@@ -225,79 +264,219 @@
   }
 
   .score-header {
-    padding: 12px 20px 10px;
+    padding: 8px 16px 6px;
     border-bottom: 1px solid #F1F5F9;
     text-align: center;
+    flex-shrink: 0;
   }
 
   #status {
     margin: 0;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
     color: var(--fg);
     letter-spacing: -0.01em;
-    line-height: 1.25;
+    line-height: 1.2;
   }
 
   main {
     flex: 1;
     min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px 14px;
     position: relative;
     width: 100%;
   }
 
   canvas {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     display: block;
     background: var(--card);
   }
 
-  @media (max-width: 700px) {
+  /* ============ Adaptación Móvil Vertical (Portrait) ============ */
+  @media (max-width: 768px) {
     body {
-      padding: 8px 10px;
-      gap: 10px;
+      padding: 6px 8px;
+      gap: 6px;
     }
+
     .controls {
-      gap: 10px;
-      padding: 12px;
+      padding: 8px 10px;
+      gap: 6px 8px;
+      border-radius: 14px;
     }
-    #play, #stop {
+
+    .song-group {
+      flex: 1 1 100%;
+    }
+
+    .transport-group {
+      flex: 1 1 auto;
+    }
+
+    .transport-group #play {
       flex: 1;
     }
+
+    #toggle-extra {
+      display: inline-flex;
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+
+    .controls.compact-mobile .speed-group,
+    .controls.compact-mobile .system-group {
+      display: none;
+    }
+
+    .speed-group {
+      flex: 1 1 48%;
+    }
+
+    .system-group {
+      flex: 0 0 auto;
+    }
+
+    .system-group .lbl {
+      display: none;
+    }
+
+    .seek-group {
+      flex: 1 1 100%;
+    }
+
+    .actions-right {
+      margin-left: 0;
+    }
+
+    .fs-label {
+      display: none;
+    }
+
+    #fs {
+      padding: 5px 10px;
+    }
+
+    .stage-card {
+      border-radius: 14px;
+    }
+
+    .score-header {
+      padding: 6px 12px 5px;
+    }
+
     #status {
-      font-size: 16px;
+      font-size: 15px;
+    }
+  }
+
+  /* ============ Adaptación Móvil Horizontal (Landscape) ============ */
+  @media (max-height: 520px) and (orientation: landscape) {
+    body {
+      padding: 4px 6px;
+      gap: 4px;
+    }
+
+    .controls {
+      padding: 4px 8px;
+      gap: 4px 8px;
+      border-radius: 12px;
+    }
+
+    .controls.compact-mobile .speed-group,
+    .controls.compact-mobile .system-group {
+      display: flex;
+    }
+
+    #toggle-extra,
+    .lbl {
+      display: none;
+    }
+
+    select, button {
+      min-height: 30px;
+      font-size: 13px;
+      padding: 2px 10px;
+      border-radius: 8px;
+    }
+
+    .pill-group {
+      padding: 2px;
+    }
+
+    .pill-group button {
+      min-height: 24px;
+      padding: 2px 9px;
+      font-size: 12px;
+    }
+
+    .song-group {
+      flex: 1 1 150px;
+      max-width: 210px;
+    }
+
+    .transport-group {
+      flex: 0 0 auto;
+    }
+
+    .speed-group {
+      flex: 1 1 110px;
+      max-width: 170px;
+    }
+
+    .system-group {
+      flex: 0 0 auto;
+    }
+
+    .seek-group {
+      flex: 1 1 140px;
+    }
+
+    #time {
+      font-size: 12px;
+      min-width: 7.2ch;
+    }
+
+    input[type=range] {
+      height: 20px;
+      min-width: 45px;
+    }
+
+    .fs-label {
+      display: none;
+    }
+
+    .stage-card {
+      border-radius: 12px;
+    }
+
+    .score-header {
+      padding: 3px 10px 2px;
+    }
+
+    #status {
+      font-size: 13px;
     }
   }
 </style>
 </head>
 <body>
 
-<div class="controls card">
-  <div class="group grow" style="flex-basis:100%">
+<div class="controls card" id="controls-bar">
+  <div class="group song-group">
     <label class="lbl" for="song">Canción</label>
     <select id="song" aria-label="Elegir canción"></select>
   </div>
 
-  <div class="group">
-    <button id="play"><span aria-hidden="true">▶</span> Iniciar</button>
-    <button id="stop">Reiniciar</button>
-  </div>
-
-  <div class="group grow">
+  <div class="group speed-group">
     <label class="lbl" for="speed">Velocidad</label>
     <input type="range" id="speed" min="50" max="200" step="5" value="100" aria-label="Velocidad">
     <output id="speedv" for="speed">100%</output>
   </div>
 
-  <div class="group">
+  <div class="group system-group">
     <span class="lbl">Digitación</span>
     <div class="pill-group" id="systems" role="group" aria-label="Sistema de digitación">
       <button type="button" data-sys="alemana">Alemana</button>
@@ -305,9 +484,21 @@
     </div>
   </div>
 
-  <div class="group full">
+  <div class="group transport-group">
+    <button id="play"><span aria-hidden="true">▶</span> Iniciar</button>
+    <button id="stop" class="btn-sec" title="Reiniciar">Reiniciar</button>
+    <button id="toggle-extra" class="btn-sec" type="button" aria-expanded="true">Ajustes ▴</button>
+  </div>
+
+  <div class="group seek-group">
     <span id="time">0:00 / 0:00</span>
     <input type="range" id="seek" min="0" max="1" step="any" value="0" aria-label="Posición en la canción">
+  </div>
+
+  <div class="actions-right">
+    <button id="fs" class="btn-sec" type="button" title="Pantalla completa">
+      <span aria-hidden="true">⛶</span><span class="fs-label">Pantalla completa</span>
+    </button>
   </div>
 </div>
 
@@ -315,7 +506,7 @@
   <header class="score-header">
     <h1 id="status">Viva el Carnaval</h1>
   </header>
-  <main><canvas id="cv" width="1280" height="720"></canvas></main>
+  <main id="stage"><canvas id="cv"></canvas></main>
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -464,7 +655,7 @@ window.addEventListener("load", () => {
   });
   songSel.addEventListener("change", () => loadMidi(parseInt(songSel.value, 10)));
 
-  /* ============ 5. Controles ============ */
+  /* ============ 5. Controles y Pantalla Completa ============ */
   const ticksNow = () => Tone.Transport.getTicksAtTime(Tone.getContext().currentTime);
   const getBeat = () => (Tone.Transport.state === "started" ? ticksNow() : posTicks) / Tone.Transport.PPQ;
 
@@ -512,6 +703,57 @@ window.addEventListener("load", () => {
     [...el("systems").querySelectorAll("button")].forEach(x => x.classList.toggle("on", x === b));
   });
 
+  /* Colapsar/mostrar ajustes secundarios en móvil vertical */
+  const controlsBar = el("controls-bar");
+  const toggleExtraBtn = el("toggle-extra");
+  toggleExtraBtn.addEventListener("click", () => {
+    const compact = controlsBar.classList.toggle("compact-mobile");
+    toggleExtraBtn.setAttribute("aria-expanded", String(!compact));
+    toggleExtraBtn.textContent = compact ? "Ajustes ▾" : "Ajustes ▴";
+    requestAnimationFrame(resize);
+  });
+
+  /* Pantalla completa híbrida (Android/PC nativo + iPhone CSS) */
+  function updateFsButton(active) {
+    el("fs").innerHTML = active
+      ? '<span aria-hidden="true">✕</span><span class="fs-label">Salir</span>'
+      : '<span aria-hidden="true">⛶</span><span class="fs-label">Pantalla completa</span>';
+  }
+
+  function toggleFullscreen() {
+    const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.body.classList.contains("is-fullscreen");
+    if (!isFS) {
+      const doc = document.documentElement;
+      const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
+      const req = doc.requestFullscreen || doc.webkitRequestFullscreen;
+      if (req && !isIPhone) {
+        try {
+          const p = req.call(doc);
+          if (p && p.catch) {
+            p.catch(() => { document.body.classList.add("is-fullscreen"); resize(); });
+          }
+        } catch (e) {
+          document.body.classList.add("is-fullscreen");
+        }
+      } else {
+        document.body.classList.add("is-fullscreen");
+      }
+      updateFsButton(true);
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(() => {});
+      document.body.classList.remove("is-fullscreen");
+      updateFsButton(false);
+    }
+    setTimeout(resize, 80);
+  }
+
+  el("fs").addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => {
+    updateFsButton(!!document.fullscreenElement);
+    resize();
+  });
+
   const seek = el("seek");
   let dragging = false, wasPlaying = false, lastSeek = 0;
 
@@ -547,19 +789,69 @@ window.addEventListener("load", () => {
     }
   });
 
-  /* ============ 6. Dibujo ============ */
-  const cv = el("cv"), ctx = cv.getContext("2d");
-  const W = 1280, H = 720, dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
-
-  const RECV_X = 170, RECV_H = 360, MOVE_H = 240, CY = 300, PX_BEAT = 240;
+  /* ============ 6. Dibujo adaptativo a cualquier pantalla ============ */
+  const cv = el("cv"), ctx = cv.getContext("2d"), stage = el("stage");
+  let W = 800, H = 450, dpr = 1;
+  const L = {}; // Geometría calculada dinámicamente
   const widthOf = h => 0.16 * h;
-  const CONTACT_X = RECV_X + widthOf(RECV_H) / 2 + widthOf(MOVE_H) / 2 + 0.062 * MOVE_H + 8;
   const HOLE_Y = [0.21, 0.31, 0.39, 0.47, 0.60, 0.68, 0.76, 0.84];
+
+  function computeLayout() {
+    const isNarrow = W < 620;
+    const isShort = H < 340;
+
+    // 1. Espaciado vertical del pentagrama y márgenes
+    L.sp = Math.max(9.5, Math.min(18, H * 0.028, W * 0.024));
+    const staffH = 4 * L.sp;
+    const topPad = Math.max(isShort ? 26 : 36, H * 0.09);
+    const botPad = Math.max(18, L.sp * 1.75); // Espacio para línea adicional de Do5
+    const midGap = Math.max(14, H * 0.055);
+
+    // 2. Altura de flautas calculada para llenar toda la altura útil
+    L.recvH = Math.max(115, H - topPad - midGap - staffH - botPad);
+    L.moveH = L.recvH * 0.68;
+    L.cy = topPad + L.recvH / 2;
+    L.staffTop = L.cy + L.recvH / 2 + midGap;
+
+    // 3. Posiciones horizontales adaptadas al ancho
+    L.recvX = isNarrow
+      ? Math.max(76, Math.min(115, W * 0.24))
+      : Math.max(125, Math.min(185, W * 0.14));
+
+    L.clefX = Math.max(26, L.recvX * 0.44);
+
+    const gapFlutes = isNarrow ? 6 : 12;
+    L.contactX = L.recvX + widthOf(L.recvH) * 0.5 + widthOf(L.moveH) * 0.5 + 0.062 * L.moveH + gapFlutes;
+
+    const availW = Math.max(180, W - L.contactX);
+    L.pxBeat = isNarrow
+      ? Math.max(105, Math.min(165, availW * 0.36))
+      : Math.max(175, Math.min(250, availW * 0.23));
+
+    // 4. Posición del indicador "Pulso" en esquina superior izquierda
+    L.pulseX = Math.max(30, Math.min(54, L.recvX * 0.34));
+    L.pulseY = Math.max(26, Math.min(48, topPad * 0.85));
+    L.pulseScale = isShort ? 0.72 : (isNarrow ? 0.85 : 1);
+  }
+
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = Math.max(220, Math.floor(r.width));
+    H = Math.max(160, Math.floor(r.height));
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = W * dpr;
+    cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    computeLayout();
+  }
+
+  new ResizeObserver(resize).observe(stage);
+  window.addEventListener("resize", resize);
+  resize();
 
   /* Indicador visual de metrónomo en la esquina superior izquierda */
   function drawMetronomeLight(beat) {
-    const cx = 56, cy = 54;
+    const cx = L.pulseX, cy = L.pulseY, sc = L.pulseScale;
     const isPlaying = Tone.Transport.state === "started" && song.notes.length > 0 && beat >= 0;
     let intensity = 0;
     let isAccent = false;
@@ -571,13 +863,12 @@ window.addEventListener("load", () => {
       isAccent = (beatIdx % song.num) === 0;
     }
 
-    const baseR = 14;
-    const coreR = baseR + 6 * intensity;
-    const haloR = baseR + 24 * intensity;
+    const baseR = 12 * sc;
+    const coreR = baseR + 5 * sc * intensity;
+    const haloR = baseR + 20 * sc * intensity;
 
     ctx.save();
 
-    // Resplandor suave cuando marca el pulso
     if (intensity > 0.02) {
       const grad = ctx.createRadialGradient(cx, cy, coreR * 0.25, cx, cy, haloR);
       if (isAccent) {
@@ -595,7 +886,6 @@ window.addEventListener("load", () => {
       ctx.fill();
     }
 
-    // Círculo indicador: reposo (#F8FAFC / #CBD5E1) -> activo (acento suave)
     ctx.beginPath();
     ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
     if (intensity > 0.04) {
@@ -611,12 +901,11 @@ window.addEventListener("load", () => {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Etiqueta secundaria
     ctx.fillStyle = "#64748B";
-    ctx.font = "700 13px 'Nunito', sans-serif";
+    ctx.font = `700 ${Math.round(12 * sc)}px 'Nunito', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Pulso", cx, cy + 26);
+    ctx.fillText("Pulso", cx, cy + baseR + 6 * sc);
 
     ctx.restore();
   }
@@ -630,9 +919,8 @@ window.addEventListener("load", () => {
     ctx.save();
     ctx.lineJoin = "round";
     ctx.strokeStyle = strokeMain;
-    ctx.lineWidth = isMonitor ? (lit ? 3.2 : 2.4) : 1.8;
+    ctx.lineWidth = isMonitor ? (lit ? 3 : 2.2) : 1.6;
 
-    // Cuerpo de la flauta
     ctx.beginPath();
     ctx.moveTo(cx - 0.35 * w, y(0));   ctx.lineTo(cx + 0.35 * w, y(0));
     ctx.lineTo(cx + 0.35 * w, y(0.10)); ctx.lineTo(cx + 0.5 * w, y(0.14));
@@ -644,27 +932,25 @@ window.addEventListener("load", () => {
     ctx.fillStyle = "#FFFFFF";
     ctx.fill();
 
-    // Relleno pastel suave (~12% opacidad) en el cuerpo de la flauta monitora cuando suena
     if (isMonitor && lit) {
       ctx.fillStyle = hexToRgba(color, 0.12);
       ctx.fill();
     }
     ctx.stroke();
 
-    // Ventana (bisel)
-    ctx.lineWidth = isMonitor ? 1.8 : 1.4;
+    ctx.lineWidth = isMonitor ? 1.6 : 1.2;
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
     ctx.strokeRect(cx - 0.22 * w, y(0.115), 0.44 * w, 0.03 * h);
 
-    // Orificios (1 trasero + 7 delanteros)
+    const thumbOffset = Math.max(4, 0.022 * h);
     holes.forEach((covered, i) => {
       const r = 0.031 * h, hy = y(HOLE_Y[i]);
-      const hx = i === 0 ? cx - 0.5 * w - r - 8 : cx;
+      const hx = i === 0 ? cx - 0.5 * w - r - thumbOffset : cx;
 
       if (isMonitor && lit && covered) {
         ctx.shadowColor = hexToRgba(color, 0.65);
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = Math.max(10, 0.045 * h);
       } else {
         ctx.shadowBlur = 0;
       }
@@ -675,15 +961,15 @@ window.addEventListener("load", () => {
       ctx.fill();
 
       ctx.shadowBlur = 0;
-      ctx.lineWidth = isMonitor ? 2 : 1.5;
+      ctx.lineWidth = isMonitor ? 1.8 : 1.3;
       ctx.strokeStyle = covered ? (isMonitor ? "#334155" : "#64748B") : strokeMain;
       ctx.stroke();
 
       if (isMonitor && lit && covered) {
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.2;
         ctx.strokeStyle = hexToRgba(color, 0.4);
         ctx.beginPath();
-        ctx.arc(hx, hy, r + 5, 0, Math.PI * 2);
+        ctx.arc(hx, hy, r + Math.max(3, 0.014 * h), 0, Math.PI * 2);
         ctx.stroke();
       }
     });
@@ -691,16 +977,16 @@ window.addEventListener("load", () => {
     ctx.restore();
   }
 
-  const STAFF_TOP = 585, SP = 16;
   const STEP = { "C5":-2, "D5":-1, "E5":0, "F5":1, "F#5":1, "G5":2, "A5":3, "B5":4, "C6":5, "D6":6 };
-  const stepY = st => STAFF_TOP + 4 * SP - st * SP / 2;
+  const stepY = st => L.staffTop + 4 * L.sp - st * L.sp / 2;
 
   function drawClef(cx) {
-    const X = u => cx + u * SP, Y = u => STAFF_TOP + u * SP;
+    const sp = L.sp;
+    const X = u => cx + u * sp, Y = u => L.staffTop + u * sp;
     ctx.save();
     ctx.strokeStyle = "#334155";
     ctx.fillStyle = "#334155";
-    ctx.lineWidth = 2.8;
+    ctx.lineWidth = Math.max(2, sp * 0.17);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -714,13 +1000,15 @@ window.addEventListener("load", () => {
     ctx.bezierCurveTo(X(-0.6), Y(3.7), X(0.3), Y(3.8), X(0.4), Y(3.1));
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(X(-0.6), Y(4.7), 3, 0, Math.PI * 2);
+    ctx.arc(X(-0.6), Y(4.7), Math.max(2, sp * 0.18), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   function drawStaff(beat, active) {
-    const bottom = STAFF_TOP + 4 * SP;
+    const sp = L.sp;
+    const bottom = L.staffTop + 4 * sp;
+    const marginX = Math.max(12, W * 0.015);
 
     // 5 líneas del pentagrama en gris suave (#CBD5E1)
     ctx.strokeStyle = "#CBD5E1";
@@ -728,36 +1016,40 @@ window.addEventListener("load", () => {
     ctx.lineCap = "butt";
     for (let i = 0; i < 5; i++) {
       ctx.beginPath();
-      ctx.moveTo(20, STAFF_TOP + i * SP);
-      ctx.lineTo(W - 20, STAFF_TOP + i * SP);
+      ctx.moveTo(marginX, L.staffTop + i * sp);
+      ctx.lineTo(W - marginX, L.staffTop + i * sp);
       ctx.stroke();
     }
-    drawClef(80);
+    drawClef(L.clefX);
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(RECV_X, 0, W - RECV_X, H);
+    ctx.rect(L.recvX, 0, W - L.recvX, H);
     ctx.clip();
 
     // Barras de compás en gris suave (#CBD5E1)
     const m = song.num;
-    let b = Math.max(m, Math.ceil((beat - (CONTACT_X - RECV_X) / PX_BEAT) / m) * m);
+    let b = Math.max(m, Math.ceil((beat - (L.contactX - L.recvX) / L.pxBeat) / m) * m);
     for (; ; b += m) {
-      const x = CONTACT_X + (b - 0.125 - beat) * PX_BEAT;
-      if (x > W - 20) break;
+      const x = L.contactX + (b - 0.125 - beat) * L.pxBeat;
+      if (x > W - marginX) break;
       ctx.strokeStyle = "#CBD5E1";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(x, STAFF_TOP);
+      ctx.moveTo(x, L.staffTop);
       ctx.lineTo(x, bottom);
       ctx.stroke();
     }
 
-    // Notas musicales
+    // Notas musicales escaladas según L.sp
+    const rx = sp * 0.62;
+    const ry = sp * 0.44;
+    const stemOffset = rx * 0.9;
+
     for (const n of song.notes) {
-      const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
+      const x = L.contactX + (n.startBeat - beat) * L.pxBeat;
       if (x > W + 40) break;
-      if (x < RECV_X - 30) continue;
+      if (x < L.recvX - 30) continue;
       const st = STEP[n.key], y = stepY(st);
 
       // Líneas adicionales (Do5)
@@ -765,21 +1057,21 @@ window.addEventListener("load", () => {
       ctx.lineWidth = 1.5;
       for (let l = -2; l >= st; l -= 2) {
         ctx.beginPath();
-        ctx.moveTo(x - 15, stepY(l));
-        ctx.lineTo(x + 15, stepY(l));
+        ctx.moveTo(x - sp * 0.95, stepY(l));
+        ctx.lineTo(x + sp * 0.95, stepY(l));
         ctx.stroke();
       }
 
       // Sostenido
       if (n.key.indexOf("#") > -1) {
         ctx.strokeStyle = "#334155";
-        ctx.lineWidth = 1.8;
+        ctx.lineWidth = Math.max(1.4, sp * 0.11);
         ctx.beginPath();
-        ctx.moveTo(x - 27, y - 9); ctx.lineTo(x - 27, y + 9);
-        ctx.moveTo(x - 21, y - 10); ctx.lineTo(x - 21, y + 8);
-        ctx.lineWidth = 3.0;
-        ctx.moveTo(x - 31, y - 2); ctx.lineTo(x - 17, y - 5);
-        ctx.moveTo(x - 31, y + 5); ctx.lineTo(x - 17, y + 2);
+        ctx.moveTo(x - sp * 1.65, y - sp * 0.55); ctx.lineTo(x - sp * 1.65, y + sp * 0.55);
+        ctx.moveTo(x - sp * 1.30, y - sp * 0.62); ctx.lineTo(x - sp * 1.30, y + sp * 0.50);
+        ctx.lineWidth = Math.max(2.2, sp * 0.18);
+        ctx.moveTo(x - sp * 1.90, y - sp * 0.14); ctx.lineTo(x - sp * 1.05, y - sp * 0.32);
+        ctx.moveTo(x - sp * 1.90, y + sp * 0.32); ctx.lineTo(x - sp * 1.05, y + sp * 0.14);
         ctx.stroke();
       }
 
@@ -788,33 +1080,33 @@ window.addEventListener("load", () => {
       ctx.translate(x, y);
       ctx.rotate(-0.35);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
       ctx.fillStyle = colorOf(n.key);
       ctx.fill();
       ctx.strokeStyle = "#334155";
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = Math.max(1.6, sp * 0.13);
       ctx.stroke();
       if (n.durBeats >= 2) {
         ctx.beginPath();
-        ctx.ellipse(0, 0, 6, 2.8, -0.5, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx * 0.6, ry * 0.4, -0.5, 0, Math.PI * 2);
         ctx.fillStyle = "#FFFFFF";
         ctx.fill();
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = Math.max(1.2, sp * 0.08);
         ctx.stroke();
       }
       ctx.restore();
 
       // Plica y corchete
       ctx.strokeStyle = "#334155";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(1.6, sp * 0.12);
       if (n.durBeats < 4) {
-        const down = st >= 4, sx = down ? x - 9 : x + 9, ey = down ? y + 3.5 * SP : y - 3.5 * SP;
+        const down = st >= 4, sx = down ? x - stemOffset : x + stemOffset, ey = down ? y + 3.4 * sp : y - 3.4 * sp;
         ctx.beginPath();
         ctx.moveTo(sx, y);
         ctx.lineTo(sx, ey);
         if (n.durBeats < 1) {
           ctx.moveTo(sx, ey);
-          ctx.quadraticCurveTo(sx + 2, ey + (down ? -12 : 12), sx + 13, ey + (down ? -16 : 16));
+          ctx.quadraticCurveTo(sx + sp * 0.15, ey + (down ? -sp * 0.75 : sp * 0.75), sx + sp * 0.8, ey + (down ? -sp : sp));
         }
         ctx.stroke();
       }
@@ -822,9 +1114,9 @@ window.addEventListener("load", () => {
       // Aro indicador en la nota activa
       if (n === active) {
         ctx.strokeStyle = "#4F46E5";
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.arc(x, y, sp * 1.25, 0, Math.PI * 2);
         ctx.stroke();
       }
     }
@@ -832,11 +1124,11 @@ window.addEventListener("load", () => {
     // Línea vertical de lectura con trazo punteado suave en índigo (#818CF8)
     ctx.strokeStyle = "#818CF8";
     ctx.setLineDash([6, 6]);
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(CONTACT_X, STAFF_TOP - 45);
-    ctx.lineTo(CONTACT_X, bottom + 45);
+    ctx.moveTo(L.contactX, Math.max(L.cy - L.recvH * 0.42, L.staffTop - sp * 2.5));
+    ctx.lineTo(L.contactX, Math.min(H - 8, bottom + sp * 1.6));
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -857,34 +1149,40 @@ window.addEventListener("load", () => {
 
     // Flautas entrantes (derecha)
     let active = null;
-    const topMove = CY - MOVE_H / 2;
+    const topMove = L.cy - L.moveH / 2;
+    const moveFontSize = Math.max(13, Math.min(21, Math.round(L.moveH * 0.088)));
     ctx.save();
     ctx.beginPath();
-    ctx.rect(RECV_X, 0, W - RECV_X, H);
+    ctx.rect(L.recvX, 0, W - L.recvX, H);
     ctx.clip();
     for (const n of song.notes) {
-      const x = CONTACT_X + (n.startBeat - beat) * PX_BEAT;
+      const x = L.contactX + (n.startBeat - beat) * L.pxBeat;
       if (beat >= n.startBeat && beat < n.startBeat + n.durBeats) active = n;
       if (x > W + 40) break;
-      if (x < RECV_X - 30) continue;
+      if (x < L.recvX - 30) continue;
       ctx.fillStyle = "#1E293B";
-      ctx.font = "700 21px 'Nunito', sans-serif";
-      ctx.fillText(n.label, x, topMove - 14);
-      drawFlute(x, topMove, MOVE_H, holesOf(n.key), false, colorOf(n.key), false);
+      ctx.font = `700 ${moveFontSize}px 'Nunito', sans-serif`;
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(n.label, x, topMove - Math.max(6, L.moveH * 0.05));
+      drawFlute(x, topMove, L.moveH, holesOf(n.key), false, colorOf(n.key), false);
     }
     ctx.restore();
 
     // Flauta monitora fija (izquierda)
+    const recvTop = L.cy - L.recvH / 2;
+    const recvFontSize = Math.max(20, Math.min(40, Math.round(L.recvH * 0.115)));
     ctx.fillStyle = "#1E293B";
-    ctx.font = "800 42px 'Nunito', sans-serif";
+    ctx.font = `800 ${recvFontSize}px 'Nunito', sans-serif`;
     ctx.textAlign = "center";
-    const recvTop = CY - RECV_H / 2;
-    if (active) ctx.fillText(active.label, RECV_X, recvTop - 22);
+    ctx.textBaseline = "alphabetic";
+    if (active) {
+      ctx.fillText(active.label, L.recvX, recvTop - Math.max(8, L.recvH * 0.045));
+    }
 
     drawFlute(
-      RECV_X,
+      L.recvX,
       recvTop,
-      RECV_H,
+      L.recvH,
       active ? holesOf(active.key) : [0,0,0,0,0,0,0,0],
       !!active,
       active ? colorOf(active.key) : "#334155",
